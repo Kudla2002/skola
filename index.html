@@ -1,0 +1,1495 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Škola">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>html:not(.unlocked) header.bar,html:not(.unlocked) #app,html:not(.unlocked) #tabbar{display:none!important}</style>
+<title>Škola ESF</title>
+<style>
+/* Škola · iOS-like vzhled (stejný jazyk jako Pipeline): systémové písmo, seskupené seznamy, rozmazaná lišta, segmentované ovladače. */
+:root{
+  --bg:#F2F2F7;--bg2:#FFFFFF;--label:#000;--label2:rgba(60,60,67,.6);--label3:rgba(60,60,67,.3);--sep:rgba(60,60,67,.18);
+  --fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.07);--tint:#007AFF;
+  --ok:#1E7B38;--ok-bg:rgba(52,199,89,.17);--warn:#955800;--warn-bg:rgba(255,149,0,.17);--crit:#C4281C;--crit-bg:rgba(255,59,48,.12);--info:#0A5FCC;--info-bg:rgba(0,122,255,.11);
+  --mark:#FF9500;--bar:rgba(242,242,247,.8);--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px -14px rgba(0,0,0,.22);
+  --cl:.6;--cf:.4;--cx:14%;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --fm:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#000;--bg2:#1C1C1E;--label:#fff;--label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);--sep:rgba(84,84,88,.65);
+  --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.14);--tint:#0A84FF;
+  --ok:#30D158;--ok-bg:rgba(48,209,88,.18);--warn:#FFB340;--warn-bg:rgba(255,159,10,.2);--crit:#FF6B62;--crit-bg:rgba(255,69,58,.2);--info:#64AEFF;--info-bg:rgba(10,132,255,.22);
+  --mark:#FF9F0A;--bar:rgba(0,0,0,.72);--shadow:none;--cl:.72;--cf:.86;--cx:22%;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#000;--bg2:#1C1C1E;--label:#fff;--label2:rgba(235,235,245,.6);--label3:rgba(235,235,245,.3);--sep:rgba(84,84,88,.65);
+  --fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.14);--tint:#0A84FF;
+  --ok:#30D158;--ok-bg:rgba(48,209,88,.18);--warn:#FFB340;--warn-bg:rgba(255,159,10,.2);--crit:#FF6B62;--crit-bg:rgba(255,69,58,.2);--info:#64AEFF;--info-bg:rgba(10,132,255,.22);
+  --mark:#FF9F0A;--bar:rgba(0,0,0,.72);--shadow:none;--cl:.72;--cf:.86;--cx:22%;color-scheme:dark}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--label);font:400 15px/1.45 var(--f);letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) 56px max(16px,env(safe-area-inset-left,0px))}
+a{color:inherit}
+button{font:inherit;letter-spacing:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
+.wrap{max-width:1040px;margin:0 auto}
+.mono{font-family:var(--fm);font-size:.86em;letter-spacing:0}
+.muted{color:var(--label2)}
+:focus-visible{outline:2px solid var(--tint);outline-offset:2px;border-radius:6px}
+
+/* barva předmětu */
+[style*="--h"]{--c:oklch(var(--cl) .16 var(--h));--c-bg:color-mix(in oklab,var(--c) var(--cx),var(--bg2));--c-fg:oklch(var(--cf) .12 var(--h));--c-line:color-mix(in oklab,var(--c) 30%,var(--bg2))}
+.sq{--s:52px;width:var(--s);height:var(--s);flex:none;border-radius:22.4%;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(160deg,oklch(.76 .14 var(--h)),oklch(.58 .19 var(--h)));box-shadow:inset 0 0 0 .5px rgba(255,255,255,.28),0 3px 8px -3px oklch(.5 .16 var(--h)/.55)}
+.sq svg{width:62%;height:62%}
+
+/* horní lišta */
+.bar{position:sticky;top:0;z-index:20;margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px))) 0 calc(-1*max(16px,env(safe-area-inset-right,0px)));
+  background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--sep);padding-top:env(safe-area-inset-top,0px)}
+.bar-in{max-width:1040px;margin:0 auto;height:48px;display:flex;align-items:center;gap:12px;padding:0 max(16px,env(safe-area-inset-left,0px)) 0 max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:9px;border:0;background:none;padding:0;font-weight:700;font-size:17px;letter-spacing:-.02em}
+.brand .sq{--s:28px}
+.thm{margin-left:8px;width:34px;height:34px;border-radius:50%;border:0;background:var(--fill);display:grid;place-items:center;color:var(--label2)}
+.thm svg{width:18px;height:18px}
+.nav{margin-left:auto;display:flex;gap:2px;background:var(--fill);padding:2px;border-radius:9px}
+.nav button{border:0;background:none;padding:5px 16px;border-radius:7px;font-weight:500;font-size:13.5px;color:var(--label);display:flex;align-items:center;gap:6px}
+.nav button[aria-current="page"]{background:var(--bg2);box-shadow:0 1px 3px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.04)}
+:root[data-theme="dark"] .nav button[aria-current="page"]{background:#636366}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nav button[aria-current="page"]{background:#636366}}
+.nav svg,.tabbar svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav svg{display:none}
+.tabbar{display:none}
+
+/* nadpisy */
+.lt{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.025em;margin:20px 2px 2px;text-wrap:balance}
+.lt-sub{margin:0 2px 14px;color:var(--label2);font-size:15px}
+.sh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.02em;margin:26px 2px 10px}
+.sh small{font-size:13px;font-weight:400;color:var(--label2);letter-spacing:-.005em}
+h1,h2,h3{margin:0;text-wrap:balance}
+h3{font-size:15px;font-weight:600;letter-spacing:-.012em}
+.back{display:inline-flex;align-items:center;gap:2px;border:0;background:none;color:var(--tint);padding:14px 0 4px;font-size:16px;margin-left:-4px}
+.back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* upozornění */
+.notices{display:grid;gap:8px;margin:6px 0 4px}
+.notice{display:flex;gap:10px;padding:11px 14px;border-radius:14px;font-size:14px;line-height:1.4;align-items:flex-start;min-width:0}
+.notice b{white-space:nowrap}
+.notice.crit{background:var(--crit-bg);color:var(--crit)}.notice.warn{background:var(--warn-bg);color:var(--warn)}.notice.info{background:var(--info-bg);color:var(--info)}
+.notice div{min-width:0;color:var(--label)}
+.notice.crit b,.notice.warn b,.notice.info b{color:inherit}
+@media (max-width:640px){.notice{flex-direction:column;gap:2px}.notice b{white-space:normal}}
+
+/* upozornění jako seznam */
+.nrow{align-items:flex-start}
+.nrow .nd{flex:none;width:9px;height:9px;border-radius:50%;margin-top:6px;background:var(--tint)}
+.nrow .nd.crit{background:var(--crit)}.nrow .nd.warn{background:var(--mark)}
+.nrow .rs{color:var(--label);font-size:14px;line-height:1.4;margin-top:2px}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.kpi{background:var(--bg2);border-radius:16px;padding:13px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;min-width:0;position:relative;text-align:left;border:0}
+.kpi .kl{font-size:12.5px;color:var(--label2);font-weight:500}
+.kpi .kv2{font-size:26px;line-height:1.15;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.kpi .ks{font-size:12.5px;color:var(--label2);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.kpi .ring{position:absolute;right:12px;top:12px}
+.kpi.hot .kv2{color:var(--crit)}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* seskupené seznamy */
+.group{background:var(--bg2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;min-height:54px;position:relative;border:0;background:none;text-align:left;min-width:0}
+.row+.row::before{content:"";position:absolute;top:0;left:14px;right:0;height:.5px;background:var(--sep)}
+button.row:active{background:var(--fill)}
+.row .rb{min-width:0;flex:1}
+.row .rt{font-weight:600;font-size:15.5px;line-height:1.3;letter-spacing:-.012em;overflow-wrap:anywhere}
+.row .rs{font-size:13px;color:var(--label2);margin-top:1px}
+.row .rr{flex:none;font-size:13.5px;color:var(--label2);text-align:right;font-variant-numeric:tabular-nums}
+.row .rr.hot{color:var(--crit);font-weight:600}
+.row .cv{flex:none;width:8px;height:14px;fill:none;stroke:var(--label3);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.dbadge{flex:none;width:48px;text-align:center;border-radius:12px;background:var(--c-bg);color:var(--c-fg);padding:5px 0 4px;line-height:1}
+.dbadge b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dbadge span{font-size:11px;font-weight:600;display:block;margin-top:2px}
+
+/* dlaždice předmětů */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.tile{background:var(--bg2);border:0;border-radius:20px;padding:14px 14px 13px;text-align:left;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow);min-width:0;transition:transform .12s}
+.tile:active{transform:scale(.985)}
+.tile .th{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.tile .sq{--s:56px}
+.tile .pr{position:relative;display:grid;place-items:center;width:42px;height:42px}
+.tile .pr .ring{position:absolute;inset:0}
+.tile .pr b{font-size:10.5px;font-weight:700;color:var(--c-fg);font-variant-numeric:tabular-nums}
+.tile .nm{font-size:17px;font-weight:700;line-height:1.2;letter-spacing:-.02em}
+.tile .cd{color:var(--label2);font-size:12.5px;margin-top:2px}
+.tile .nx{margin-top:auto;padding-top:9px;border-top:.5px solid var(--sep);font-size:13px;display:flex;gap:7px;align-items:flex-start;color:var(--label)}
+.tile .nx i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c);margin-top:6px}
+.tile .nx.none i{background:var(--label3)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:500;background:var(--fill);color:var(--label2);white-space:nowrap;line-height:1.5;text-decoration:none}
+.chip.c{background:var(--c-bg);color:var(--c-fg)}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.crit{background:var(--crit-bg);color:var(--crit)}.chip.info{background:var(--info-bg);color:var(--info)}
+
+/* stránka předmětu */
+.chead{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:6px 2px 4px}
+.chead .sq{--s:72px}
+.chead .ti{min-width:0;flex:1 1 240px}
+.chead h1{font-size:clamp(26px,5vw,34px);line-height:1.1;font-weight:700;letter-spacing:-.025em}
+.chead .sub{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tabs{display:flex;gap:2px;overflow-x:auto;margin:14px 0 0;background:var(--fill);border-radius:11px;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1 0 auto;border:0;background:none;padding:7px 14px;white-space:nowrap;color:var(--label);font-weight:500;font-size:13.5px;border-radius:9px}
+.tabs button[aria-selected="true"]{background:var(--bg2);box-shadow:0 1px 3px rgba(0,0,0,.14),0 0 0 .5px rgba(0,0,0,.04);font-weight:600}
+:root[data-theme="dark"] .tabs button[aria-selected="true"]{background:#636366}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tabs button[aria-selected="true"]{background:#636366}}
+.tabs .n{font-size:11px;font-variant-numeric:tabular-nums;background:var(--fill);border-radius:99px;padding:0 6px;margin-left:5px;color:var(--label2)}
+.panel{padding-top:16px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.card{background:var(--bg2);border-radius:16px;padding:14px 16px;min-width:0;box-shadow:var(--shadow)}
+.card h3{margin-bottom:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:0}
+.kv dt{color:var(--label2);font-size:13px}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.list li{padding-left:16px;position:relative;overflow-wrap:anywhere}
+.list li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--c,var(--tint))}
+.stat{display:flex;gap:8px;flex-wrap:wrap}
+.stat div{background:var(--c-bg);color:var(--c-fg);border-radius:12px;padding:8px 13px;min-width:112px}
+.stat b{display:block;font-size:21px;line-height:1.15;font-weight:700;letter-spacing:-.02em}
+.stat span{font-size:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:.5px solid var(--sep);vertical-align:top}
+th{font-size:12px;color:var(--label2);font-weight:600}
+.scroll-x{overflow-x:auto}
+td.num,th.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.now td{background:color-mix(in oklab,var(--mark) 20%,transparent)}
+tr.past td{color:var(--label2)}
+.flag{display:inline-block;font-size:11px;border-radius:5px;padding:0 6px;background:var(--fill);color:var(--label2);margin-left:6px;vertical-align:middle}
+
+/* termíny */
+.dl{background:var(--bg2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.dli{display:grid;grid-template-columns:auto auto 1fr;gap:12px;align-items:start;padding:12px 14px;position:relative}
+.dli+.dli::before{content:"";position:absolute;top:0;left:14px;right:0;height:.5px;background:var(--sep)}
+.dli.done .body,.dli.done .when{opacity:.5}
+.dli.done .dtt{text-decoration:line-through}
+.chk{appearance:none;-webkit-appearance:none;flex:none;width:24px;height:24px;margin:1px 0 0;border-radius:50%;border:1.6px solid var(--label3);background:transparent;display:grid;place-items:center;cursor:pointer}
+.chk:checked{background:var(--c,var(--tint));border-color:var(--c,var(--tint))}
+.chk:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.3px 2.3px 0;transform:translate(0,-1px) rotate(45deg)}
+.dli .when{min-width:92px;font-variant-numeric:tabular-nums}
+.dli .when b{display:block;font-size:15.5px;line-height:1.2;font-weight:600}
+.dli .when span{font-size:12.5px;color:var(--label2)}
+.dli .dtt{font-weight:600;line-height:1.3;letter-spacing:-.012em}
+.dli .dnote{font-size:13.5px;color:var(--label2);margin-top:2px}
+.dli .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.dli.urgent .when b{color:var(--crit)}
+.dli.soon .when b{color:var(--warn)}
+.filters{display:flex;gap:6px;overflow-x:auto;margin:0 -16px 8px;padding:2px 16px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.fb{flex:none;border:0;background:var(--fill);border-radius:99px;padding:6px 13px;font-size:13.5px;font-weight:500;color:var(--label)}
+.fb[aria-pressed="true"]{background:var(--tint);color:#fff}
+.fb.cc[aria-pressed="true"]{background:var(--c);color:#fff}
+.empty{padding:20px;border-radius:16px;background:var(--fill2);color:var(--label2);text-align:center}
+
+/* materiály */
+.mg{margin-bottom:18px}
+.mg h3{margin:0 2px 6px;font-size:15px}
+.links{display:grid;gap:0;background:var(--bg2);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.links a{display:flex;gap:10px;align-items:center;text-decoration:none;padding:10px 14px;min-width:0;overflow-wrap:anywhere;font-size:14.5px;position:relative;color:var(--label)}
+.links a+a::before{content:"";position:absolute;top:0;left:14px;right:0;height:.5px;background:var(--sep)}
+.links a:active{background:var(--fill)}
+.links a::after{content:"";flex:none;margin-left:auto;width:7px;height:7px;border:solid var(--label3);border-width:2px 2px 0 0;transform:rotate(45deg)}
+.links a .ext{flex:none;font-family:var(--fm);font-size:10.5px;font-weight:600;color:var(--c-fg,var(--info));background:var(--c-bg,var(--info-bg));border-radius:6px;padding:1px 6px;text-transform:uppercase;min-width:38px;text-align:center}
+.links a small{display:block;color:var(--label2);font-size:12.5px}
+.links a>span:last-of-type{min-width:0}
+@media (min-width:900px){.links.cols2{grid-template-columns:1fr 1fr}}
+
+/* leaflety */
+.lf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.lf{text-align:left;background:var(--bg2);border:0;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:7px;min-width:0;box-shadow:var(--shadow)}
+.lf:active{transform:scale(.985)}
+.lf .no{font-size:28px;font-weight:700;letter-spacing:-.03em;color:var(--c);line-height:1}
+.lf .tt{font-weight:600;line-height:1.25;font-size:15.5px}
+.lf .bar2{height:5px;background:var(--fill);border-radius:3px;overflow:hidden;margin-top:2px}
+.lf .bar2 i{display:block;height:100%;background:var(--c);border-radius:3px}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:12px 0}
+.task{background:var(--bg2);border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.task-h{display:flex;gap:12px;align-items:flex-start;padding:14px 14px 10px}
+.task-n{flex:none;min-width:30px;height:30px;padding:0 6px;border-radius:15px;display:grid;place-items:center;font-weight:700;font-size:14px;background:var(--c-bg);color:var(--c-fg);font-variant-numeric:tabular-nums}
+.task-t{min-width:0;flex:1;overflow-wrap:anywhere;padding-top:3px}
+.task-t p{margin:0 0 6px}
+.task-t ul{margin:6px 0 4px;padding-left:0;list-style:none;display:grid;gap:5px}
+.task-t ul li{padding-left:28px;position:relative}
+.task-t ul li>b.pl{position:absolute;left:0;top:0;font-weight:600;color:var(--c-fg);font-size:.95em}
+.mk{display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:0 8px;margin-right:6px;vertical-align:middle;line-height:1.6}
+.mk.b{background:var(--label);color:var(--bg2)}
+.mk.f{background:var(--fill);color:var(--label2)}
+.sol-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;border-top:.5px solid var(--sep);background:none;color:var(--tint);padding:11px 14px;font-size:15px;font-weight:500}
+.sol-btn::after{content:"";width:7px;height:7px;border:solid currentColor;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s}
+.sol-btn[aria-expanded="true"]::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.sol-btn:active{background:var(--fill)}
+.sol{border-top:.5px solid var(--sep);background:var(--c-bg);padding:14px 14px 14px}
+.sol p{margin:0 0 7px}
+.sol ul{margin:4px 0 8px;padding-left:18px}
+.sol .ver{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sol code,.task code{font-family:var(--fm);font-size:.88em;background:var(--fill);border-radius:5px;padding:0 4px}
+.sol .graph{font-style:italic;color:var(--label2)}
+details.alt{margin:2px 0 8px;font-size:13.5px}
+details.alt summary{cursor:pointer;list-style:none;color:var(--tint);font-weight:500;display:inline-flex;gap:4px;align-items:center}
+details.alt summary::-webkit-details-marker{display:none}
+details.alt summary::before{content:"▸";font-size:10px;transition:transform .15s}
+details.alt[open] summary::before{transform:rotate(90deg)}
+details.alt .graph{margin:4px 0 0}
+.rev{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--label);margin-top:10px;cursor:pointer}
+.rev .chk{width:22px;height:22px;margin:0}
+.rev .chk:checked::after{width:5px;height:10px}
+
+/* týdenní rozvrh */
+.wk{position:relative;display:grid;grid-template-columns:44px repeat(5,minmax(120px,1fr));min-width:660px;background:var(--bg2);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.wk .hd{padding:8px 4px;text-align:center;font-weight:600;font-size:13.5px;border-bottom:.5px solid var(--sep);position:sticky;top:0;background:var(--bg2)}
+.wk .hd.today{color:var(--tint)}
+.wk .hr{position:relative;border-right:.5px solid var(--sep)}
+.wk .hr span{position:absolute;right:6px;font-size:11px;color:var(--label2);transform:translateY(-50%);font-variant-numeric:tabular-nums}
+.wk .dc{position:relative;border-left:.5px solid var(--sep);background-image:linear-gradient(var(--sep) .5px,transparent .5px);background-size:100% 56px}
+.wk .blk{position:absolute;left:3px;right:3px;border-radius:10px;padding:4px 7px;background:var(--c-bg);color:var(--c-fg);font-size:12px;line-height:1.25;overflow:hidden;text-align:left;border:0;border-left:3.5px solid var(--c)}
+.wk .blk b{display:block;font-size:12.5px}
+.wk .blk.conflict{outline:2px dashed var(--crit);outline-offset:-2px}
+
+@media (max-width:700px){
+  .nav{display:none}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(3,1fr);
+    background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--sep);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+  .tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;border:0;background:none;padding:3px 0;font-size:10.5px;font-weight:500;color:var(--label2)}
+  .tabbar button[aria-current="page"]{color:var(--tint)}
+  .thm{margin-left:auto}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .lt{font-size:30px}
+}
+@media (max-width:560px){
+  .dli{grid-template-columns:auto 1fr}
+  .dli .when{grid-column:2}
+  .dli .body{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* Škola · grafy. Série --s1..--s8 = validovaná kategoriální paleta (světlý i tmavý režim). */
+:root{
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--s8:#e34948;--win:#008300;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--win:#30D158}
+}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--win:#30D158}
+
+.charts{display:flex;flex-direction:column;gap:12px;margin:14px 0 4px}
+.chart{--vs:var(--bg2,#fff);--ink:var(--label,#000);--ink2:var(--label2,rgba(60,60,67,.6));--rule:var(--sep,rgba(60,60,67,.18));
+  margin:0;padding:12px 12px 10px;border-radius:14px;background:var(--vs);border:.5px solid var(--rule);position:relative;min-width:0}
+.chart .ct{font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--ink);margin:0 2px 2px}
+.chart .cc{margin:0 2px 8px;font-size:13px;line-height:1.35;color:var(--ink2)}
+.chart .cl{display:flex;flex-wrap:wrap;gap:4px 14px;margin:2px 2px 6px;font-size:12.5px;color:var(--ink2)}
+.chart .cl .li{display:inline-flex;align-items:center;gap:6px}
+.chart .lk{display:inline-block;flex:none;width:18px;height:0;border-top:2.5px solid var(--c);border-radius:2px}
+.chart .lk.dash{border-top-style:dashed}
+.chart .lk.box{width:11px;height:11px;border:0;border-radius:3px;background:var(--c)}
+.chart .cw{position:relative;min-width:0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;font-family:inherit;touch-action:pan-y}
+
+/* text in svg */
+.chart .tx{font-size:11.5px;fill:var(--ink2);font-variant-numeric:tabular-nums}
+.chart .tx.halo{paint-order:stroke;stroke:var(--vs);stroke-width:3.5px;stroke-linejoin:round}
+.chart .tx.tick{font-size:11px}
+.chart .tx.tick.b{fill:var(--ink);font-weight:600}
+.chart .tx.axl{font-size:11.5px;font-style:italic}
+.chart .tx.dl{fill:var(--ink);font-weight:600;font-size:12px}
+.chart .tx.pl{fill:var(--ink);font-weight:600;font-size:12px}
+.chart .tx.note{fill:var(--ink2);font-size:11.5px}
+.chart .tx.cat{fill:var(--ink);font-weight:600;font-size:12.5px}
+.chart .tx.val{fill:var(--ink);font-weight:600;font-size:12px}
+.chart .tx.val.w{fill:var(--ink);font-weight:700}
+
+/* geometry */
+.chart .grid line{stroke:var(--rule);stroke-width:1;shape-rendering:crispEdges}
+.chart .axis{stroke:var(--ink2);stroke-width:1;opacity:.7;shape-rendering:crispEdges}
+.chart .ln{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.chart .area{stroke:none}
+.chart .rline{stroke:var(--ink2);stroke-width:1.25;stroke-dasharray:3 4;opacity:.8}
+.chart .guide line{stroke:var(--ink2);stroke-width:1;stroke-dasharray:2 3;opacity:.85}
+.chart .pt{stroke-width:2.25}
+.chart .pt.open{stroke-width:2.5}
+.chart .cross line{stroke:var(--ink2);stroke-width:1;opacity:.55}
+.chart .cross .dot{stroke:var(--vs);stroke-width:2}
+.chart .bar{stroke:none;outline:none;transition:opacity .12s}
+.chart .bar:hover,.chart .bar:focus{opacity:.82}
+.chart [tabindex]:focus-visible{outline:2px solid var(--tint,#007AFF);outline-offset:2px;border-radius:3px}
+
+/* tooltip */
+.chart .vtip{position:absolute;z-index:5;pointer-events:none;background:var(--ink);color:var(--vs);padding:6px 9px;border-radius:9px;font-size:12px;line-height:1.3;box-shadow:0 4px 14px rgba(0,0,0,.22);white-space:nowrap}
+.chart .vtip .vth{font-weight:600;margin-bottom:2px;opacity:.9}
+.chart .vtip .vtr{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.chart .vtip .vtk{width:8px;height:8px;border-radius:2px;flex:none}
+.chart .vtip span{opacity:.75}
+
+/* table view */
+.chart details.vt{margin:8px 2px 0;font-size:12.5px;color:var(--ink2)}
+.chart details.vt summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:4px;color:var(--tint,#007AFF);font-weight:500;padding:2px 0}
+.chart details.vt summary::-webkit-details-marker{display:none}
+.chart details.vt summary::before{content:"▸";font-size:10px;transition:transform .15s}
+.chart details.vt[open] summary::before{transform:rotate(90deg)}
+.chart details.vt table{border-collapse:collapse;margin-top:6px;width:100%;font-variant-numeric:tabular-nums}
+.chart details.vt th,.chart details.vt td{padding:4px 8px;text-align:right;border-bottom:.5px solid var(--rule)}
+.chart details.vt th:first-child,.chart details.vt td:first-child{text-align:left}
+.chart details.vt th{color:var(--ink);font-weight:600}
+
+/* matrix (hra v normální formě) */
+.chart .mxk{display:flex;flex-wrap:wrap;gap:4px 16px;margin:2px 2px 8px;font-size:12.5px;color:var(--ink2)}
+.chart .mxk span{display:inline-flex;align-items:center;gap:6px}
+.chart .cw.mx{overflow-x:auto}
+.chart table.vmx{border-collapse:separate;border-spacing:6px;margin:0 auto;font-variant-numeric:tabular-nums;max-width:100%}
+.chart .vmx th{font-weight:600;color:var(--ink);font-size:13px;padding:2px 4px}
+.chart .vmx th.pl2{font-size:12px;color:var(--ink2);font-weight:500;text-align:center}
+.chart .vmx th.cn{text-align:center;min-width:76px;background:color-mix(in srgb,var(--s2) 14%,var(--vs));border-radius:9px;padding:7px 8px}
+.chart .vmx th.rn{text-align:left;background:color-mix(in srgb,var(--s1) 14%,var(--vs));border-radius:9px;padding:7px 10px;min-width:92px}
+.chart .vmx th.rn small{display:block;font-size:11px;color:var(--ink2);font-weight:500}
+.chart .vmx td{position:relative;text-align:center;background:var(--fill,rgba(120,120,128,.12));border-radius:10px;padding:13px 10px;font-size:16px;white-space:nowrap;min-width:76px}
+.chart .vmx td .sep{color:var(--ink2);margin:0 3px}
+.chart .vmx td .p1,.chart .vmx td .p2{font-weight:600;border-bottom:2.5px solid transparent;padding-bottom:1px}
+.chart .vmx td .p1{color:var(--ink)}.chart .vmx td .p2{color:var(--ink)}
+.chart .vmx td .p1.br{border-bottom-color:var(--s1)}
+.chart .vmx td .p2.br{border-bottom-color:var(--s2)}
+.chart .vmx td.ne{background:color-mix(in srgb,var(--win) 16%,var(--vs));outline:2px solid var(--win);outline-offset:-2px}
+.chart .vmx td em{position:absolute;top:2px;right:6px;font-size:10px;font-style:normal;font-weight:700;color:var(--win);letter-spacing:.02em}
+.chart .mxn{margin:8px 2px 0;font-size:12.5px;line-height:1.4;color:var(--ink2)}
+
+/* tree */
+.chart .te{stroke:var(--ink2);stroke-width:1.75;stroke-linecap:round;opacity:.75}
+.chart .te.win{stroke:var(--win);stroke-width:3;opacity:1}
+.chart .tpill{fill:var(--fill,rgba(120,120,128,.12));stroke:var(--ink2);stroke-width:1.25}
+.chart .tn.leaf{fill:var(--ink);stroke:none}
+.chart .tx.el{font-size:11.5px;fill:var(--ink);font-weight:500}
+
+.chart-err{padding:10px;border-radius:10px;background:var(--fill,rgba(120,120,128,.12));font-size:13px;color:var(--label2,#666)}
+@media (max-width:480px){.chart{padding:10px 8px 8px;border-radius:12px}.chart table.vmx{border-spacing:4px}.chart .vmx td{padding:11px 6px;font-size:15px;min-width:60px}}
+@media (prefers-reduced-motion:reduce){.chart *{transition:none!important}}
+
+</style>
+
+<header class="bar"><div class="bar-in">
+  <button class="brand" id="brand" aria-label="Domů"><span class="sq" style="--h:255"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4 2.5 9 12 14l9.5-5L12 4Z"/><path d="M6.5 11.5v4.2c0 1.2 2.5 2.8 5.5 2.8s5.5-1.6 5.5-2.8v-4.2"/><path d="M21.5 9v5"/></svg></span><span>Škola</span></button>
+  <nav class="nav" id="nav" aria-label="Hlavní navigace"></nav>
+  <button class="thm" id="thm" aria-label="Vzhled"></button>
+</div></header>
+<main class="wrap" id="app"></main>
+<nav class="tabbar" id="tabbar" aria-label="Hlavní navigace"></nav>
+
+<script>
+/* Škola · webová verze: přihlášení přes Google + data z Google Disku.
+   Veřejná stránka neobsahuje žádná data (předměty, UČO, leaflety). Po přihlášení si appka stáhne soubor
+   „Škola ESF – data.json“ z tvého Disku (scope drive.file = vidí jen soubor, který sama vytvořila),
+   uloží ho do IndexedDB tohoto zařízení a teprve pak spustí hlavní skript (#skola-main).
+   Tok: OAuth 2.0 implicit (redirect), stejně jako u Pipeline. Bez serveru, bez cookies. */
+(function () {
+  'use strict';
+  var CFG = {
+    clientId: '1020263773048-jvti388ggupi0k7701mqsgj89fkb1c9h.apps.googleusercontent.com',
+    fileName: 'Škola ESF – data.json',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'
+  };
+  var root = document.documentElement;
+  var booted = false;
+
+  function configured() { return CFG.clientId.indexOf('__') !== 0; }
+  function mkerr(msg, code) { var e = new Error(msg); e.code = code; return e; }
+
+  /* ---------- úložiště (vše s try/catch: v soukromém režimu může selhat) ---------- */
+  function lget(k) { try { var v = localStorage.getItem('skola.g.' + k); return v == null ? null : JSON.parse(v); } catch (e) { return null; } }
+  function lset(k, v) { try { localStorage.setItem('skola.g.' + k, JSON.stringify(v)); } catch (e) {} }
+  function ldel(k) { try { localStorage.removeItem('skola.g.' + k); } catch (e) {} }
+
+  var DBN = 'skola-web', ST = 'kv';
+  function idb() {
+    return new Promise(function (res, rej) {
+      try {
+        var r = indexedDB.open(DBN, 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore(ST); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      } catch (e) { rej(e); }
+    });
+  }
+  function idbGet(k) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var q = db.transaction(ST).objectStore(ST).get(k);
+        q.onsuccess = function () { res(q.result || null); };
+        q.onerror = function () { rej(q.error); };
+      });
+    }).catch(function () { return null; });
+  }
+  function idbSet(k, v) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var t = db.transaction(ST, 'readwrite');
+        t.objectStore(ST).put(v, k);
+        t.oncomplete = function () { res(true); };
+        t.onerror = function () { rej(t.error); };
+      });
+    }).catch(function () { return false; });
+  }
+  function idbDel(k) {
+    return idb().then(function (db) {
+      return new Promise(function (res, rej) {
+        var t = db.transaction(ST, 'readwrite');
+        t.objectStore(ST).delete(k);
+        t.oncomplete = function () { res(true); };
+        t.onerror = function () { rej(t.error); };
+      });
+    }).catch(function () { return false; });
+  }
+
+  /* ---------- Google OAuth (implicit flow přes přesměrování) ---------- */
+  function rid() {
+    var a = new Uint8Array(16); crypto.getRandomValues(a);
+    return Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+  }
+  function redirectUri() { return location.origin + location.pathname.replace(/index\.html$/, ''); }
+  function token() { var t = lget('tok'); return t && t.exp > Date.now() + 30000 ? t.at : null; }
+
+  function login() {
+    if (!configured()) return;
+    var st = rid();
+    lset('state', st); lset('ret', location.hash || '');
+    var p = new URLSearchParams({
+      client_id: CFG.clientId, redirect_uri: redirectUri(), response_type: 'token',
+      scope: CFG.scope, include_granted_scopes: 'true', state: st
+    });
+    var hint = lget('owner');
+    if (hint) p.set('login_hint', hint); else p.set('prompt', 'select_account');
+    location.assign('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
+  }
+
+  /* odpověď Googlu přijde v hashi (#access_token=… nebo #error=…); hned ji z adresy odstraníme */
+  function handleRedirect() {
+    var h = location.hash;
+    if (!/[#&](access_token|error)=/.test(h)) return null;
+    var p = new URLSearchParams(h.replace(/^#/, ''));
+    var ret = lget('ret') || ''; ldel('ret');
+    try { history.replaceState(null, '', location.pathname + location.search + (ret && ret !== '#' ? ret : '')); } catch (e) {}
+    var st = lget('state'); ldel('state');
+    if (!st || p.get('state') !== st) return { err: 'Neplatná odpověď přihlášení. Zkus to znovu.' };
+    if (p.get('error')) return { err: p.get('error') === 'access_denied' ? 'Přihlášení bylo zrušeno.' : 'Google vrátil chybu: ' + p.get('error') + '.' };
+    if ((p.get('scope') || '').indexOf('drive.file') < 0) return { err: 'Chybí oprávnění k Disku. Přihlas se znovu a nech ho zaškrtnuté.' };
+    lset('tok', { at: p.get('access_token'), exp: Date.now() + (+p.get('expires_in') || 3600) * 1000 });
+    return { ok: true };
+  }
+
+  function gfetch(url, opt) {
+    opt = opt || {};
+    var t = token();
+    if (!t) return Promise.reject(mkerr('nepřihlášeno', 401));
+    opt.headers = Object.assign({}, opt.headers, { Authorization: 'Bearer ' + t });
+    return fetch(url, opt).then(function (r) {
+      if (r.status === 401) { ldel('tok'); throw mkerr('přihlášení vypršelo', 401); }
+      if (!r.ok) throw mkerr('Google odpověděl chybou ' + r.status, r.status);
+      return r;
+    });
+  }
+  function whoami() {
+    return gfetch('https://www.googleapis.com/oauth2/v3/userinfo').then(function (r) { return r.json(); })
+      .then(function (j) { var e = (j.email || '').toLowerCase(); if (!e) throw mkerr('Google nevrátil e-mail účtu.', 0); return e; });
+  }
+
+  /* ---------- Disk ---------- */
+  var DRV = 'https://www.googleapis.com/drive/v3/files', UP = 'https://www.googleapis.com/upload/drive/v3/files';
+  function findFile() {
+    var q = encodeURIComponent("name='" + CFG.fileName.replace(/'/g, "\\'") + "' and trashed=false");
+    return gfetch(DRV + '?q=' + q + '&spaces=drive&fields=' + encodeURIComponent('files(id,modifiedTime)') + '&orderBy=' + encodeURIComponent('modifiedTime desc'))
+      .then(function (r) { return r.json(); }).then(function (j) { return (j.files && j.files[0]) || null; });
+  }
+  function download(id) { return gfetch(DRV + '/' + id + '?alt=media').then(function (r) { return r.json(); }); }
+  function upload(id, obj) {
+    var json = JSON.stringify(obj);
+    if (id) return gfetch(UP + '/' + id + '?uploadType=media&fields=id,modifiedTime', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: json }).then(function (r) { return r.json(); });
+    var b = 'skola' + rid(), meta = { name: CFG.fileName, mimeType: 'application/json' };
+    return gfetch(UP + '?uploadType=multipart&fields=id,modifiedTime', {
+      method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b },
+      body: '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) +
+        '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + json + '\r\n--' + b + '--'
+    }).then(function (r) { return r.json(); });
+  }
+  function validate(o) {
+    if (!o || typeof o !== 'object' || o.schema !== 1 || !o.data || typeof o.data !== 'object' ||
+        !Array.isArray(o.data.courses) || !o.data.leaflets || typeof o.data.leaflets !== 'object')
+      throw mkerr('Soubor nemá správný formát. Očekávám skola-data.json.', 0);
+    return o.data;
+  }
+  function storeCache(data, meta, email) {
+    lset('owner', email);
+    return idbSet('data', { data: data, rev: (meta && meta.modifiedTime) || '', fid: meta && meta.id, owner: email, saved: Date.now() });
+  }
+
+  /* ---------- vzhled brány ---------- */
+  (function css() {
+    var s = document.createElement('style');
+    s.textContent =
+      '#gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;overflow:auto;background:var(--bg);color:var(--label);padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom))}' +
+      '.gcard{width:min(100%,380px);text-align:center}' +
+      '.gcard .sq{--s:76px;margin:0 auto}.gcard .sq svg{width:40px;height:40px}' +
+      '.gcard h1{font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.025em;margin:20px 0 8px}' +
+      '.gcard p{margin:0 0 22px;color:var(--label2);font-size:15px;text-wrap:balance}' +
+      '.gbtn{position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin:0 0 10px;border:0;border-radius:14px;background:var(--tint);color:#fff;font-weight:600;font-size:17px;cursor:pointer;padding:0 16px}' +
+      '.gbtn.sec{background:var(--fill);color:var(--tint)}.gbtn.dng{background:var(--crit-bg);color:var(--crit)}' +
+      '.gbtn input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}' +
+      '.gbtn:focus-within,.gbtn:focus-visible{outline:2px solid var(--tint);outline-offset:2px}' +
+      '.gmsg{margin:0 0 16px;padding:11px 14px;border-radius:12px;background:var(--crit-bg);color:var(--crit);font-size:14px;text-align:left}' +
+      '.gmeta{margin-top:14px;font-size:13px;color:var(--label2);overflow-wrap:anywhere}' +
+      '.gspin{width:26px;height:26px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--fill);border-top-color:var(--tint);animation:gs .8s linear infinite}' +
+      '@keyframes gs{to{transform:rotate(360deg)}}' +
+      '.gsheetbg{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center}' +
+      '.gsheet{width:min(100%,460px);max-height:92vh;overflow:auto;background:var(--bg2);border-radius:20px 20px 0 0;padding:18px 18px max(18px,env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}' +
+      '.gsheet h2{margin:0 0 4px;font-size:20px;letter-spacing:-.02em}' +
+      '.gsheet .gmeta{margin:0 0 16px;text-align:left}' +
+      '.gtoast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));z-index:80;display:flex;gap:12px;align-items:center;max-width:min(92vw,420px);padding:10px 14px;border-radius:14px;background:var(--label);color:var(--bg);font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25)}' +
+      '.gtoast button{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;padding:0}' +
+      '.thm.acc{margin-left:8px!important}' +
+      '@media (prefers-reduced-motion:reduce){.gspin{animation:none}}';
+    document.head.appendChild(s);
+  })();
+
+  function gateEl() {
+    var g = document.getElementById('gate');
+    if (!g) { g = document.createElement('div'); g.id = 'gate'; document.body.appendChild(g); }
+    return g;
+  }
+  function node(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  /* o: {spin, title, text, msg, buttons:[{label,cls,fn}], file:{label,fn}, meta} */
+  function screen(o) {
+    var g = gateEl(); g.textContent = '';
+    var c = node('div', 'gcard');
+    if (o.spin) c.appendChild(node('div', 'gspin'));
+    else { var b = document.querySelector('#brand .sq'); if (b) c.appendChild(b.cloneNode(true)); }
+    c.appendChild(node('h1', null, o.title));
+    if (o.text) c.appendChild(node('p', null, o.text));
+    if (o.msg) { var m = node('div', 'gmsg', o.msg); m.setAttribute('role', 'alert'); c.appendChild(m); }
+    if (o.file) c.appendChild(fileBtn(o.file.label, 'gbtn', o.file.fn));
+    (o.buttons || []).forEach(function (bt) {
+      var el = node('button', 'gbtn' + (bt.cls ? ' ' + bt.cls : ''), bt.label); el.type = 'button'; el.addEventListener('click', bt.fn); c.appendChild(el);
+    });
+    if (o.meta) c.appendChild(node('div', 'gmeta', o.meta));
+    g.appendChild(c);
+  }
+  function fileBtn(label, cls, fn) {
+    var l = node('label', cls, label), i = document.createElement('input');
+    i.type = 'file'; i.accept = '.json,application/json'; i.setAttribute('aria-label', label);
+    i.addEventListener('change', function () { var f = i.files && i.files[0]; i.value = ''; if (f) fn(f); });
+    l.appendChild(i); return l;
+  }
+  function toast(text, actionLabel, fn) {
+    var old = document.querySelector('.gtoast'); if (old) old.remove();
+    var t = node('div', 'gtoast'); t.setAttribute('role', 'status'); t.appendChild(node('span', null, text));
+    if (actionLabel) { var b = node('button', null, actionLabel); b.type = 'button'; b.addEventListener('click', fn); t.appendChild(b); }
+    document.body.appendChild(t);
+    if (!actionLabel) setTimeout(function () { t.remove(); }, 5000);
+  }
+
+  /* ---------- obrazovky ---------- */
+  function showLogin(msg) {
+    var ok = configured();
+    screen({
+      title: 'Škola',
+      text: 'Předměty, termíny a vyřešené leaflety. Data jsou uložená na tvém Google Disku, tahle stránka je neobsahuje.',
+      msg: msg || (ok ? '' : 'Přihlášení ještě není nastavené (chybí Google Client ID).'),
+      buttons: ok ? [{ label: 'Přihlásit se přes Google', fn: login }] : []
+    });
+  }
+  function showLoading(t) { screen({ spin: true, title: t || 'Načítám data z Disku…' }); }
+  function showError(e) {
+    var msg = e && e.code === 401 ? 'Přihlášení vypršelo. Přihlas se znovu.' : ((e && e.message) || 'Něco se pokazilo.');
+    screen({ title: 'Nepodařilo se načíst data', msg: msg, buttons: [{ label: 'Přihlásit znovu', fn: login }] });
+  }
+  function showImport(email, existingId, msg) {
+    screen({
+      title: 'Nahraj data',
+      text: 'Na tvém Google Disku zatím nejsou data aplikace. Vyber soubor skola-data.json. Nahraje se na tvůj Disk a další zařízení si ho po přihlášení stáhnou samo.',
+      msg: msg,
+      file: { label: 'Vybrat skola-data.json', fn: function (f) { importFile(f, existingId, email, true); } },
+      buttons: [{ label: 'Odhlásit', cls: 'sec', fn: logout }],
+      meta: 'Přihlášen jako ' + email
+    });
+  }
+
+  function importFile(file, existingId, email, fromGate) {
+    if (fromGate) showLoading('Nahrávám na Disk…'); else toast('Nahrávám na Disk…');
+    file.text().then(function (txt) {
+      var o; try { o = JSON.parse(txt); } catch (e) { throw mkerr('Soubor není platný JSON.', 0); }
+      var d = validate(o);
+      return upload(existingId, o).then(function (meta) { return storeCache(d, meta, email).then(function () { return d; }); });
+    }).then(function (d) {
+      if (fromGate) boot(d); else location.reload();
+    }).catch(function (e) {
+      if (e && e.code === 401) { fromGate ? showLogin('Přihlášení vypršelo. Přihlas se znovu.') : toast('Přihlášení vypršelo.'); return; }
+      fromGate ? showImport(email, existingId, e.message) : toast(e.message || 'Nahrání se nepovedlo.');
+    });
+  }
+
+  function loadFromDrive() {
+    showLoading();
+    var email;
+    whoami().then(function (e) { email = e; return findFile(); }).then(function (f) {
+      if (!f) return showImport(email, null);
+      return download(f.id).then(function (o) {
+        var d = validate(o);
+        return storeCache(d, f, email).then(function () { boot(d); });
+      });
+    }).catch(function (e) {
+      if (e && e.code === 401) return showLogin('Přihlášení vypršelo. Přihlas se znovu.');
+      showError(e);
+    });
+  }
+
+  /* na pozadí: je na Disku novější verze dat než ta v zařízení? */
+  function checkUpdate(cache, quiet) {
+    return whoami().then(function (email) {
+      if (cache.owner && email !== cache.owner) return idbDel('data').then(function () { location.reload(); });
+      lset('owner', email);
+      return findFile().then(function (f) {
+        if (!f) { if (!quiet) toast('Na Disku není žádný soubor s daty.'); return; }
+        if (f.modifiedTime && f.modifiedTime === cache.rev) { if (!quiet) toast('Data jsou aktuální.'); return; }
+        return download(f.id).then(function (o) {
+          var d = validate(o);
+          return storeCache(d, f, email).then(function () { toast('Na Disku jsou novější data.', 'Obnovit', function () { location.reload(); }); });
+        });
+      });
+    }).catch(function (e) { if (!quiet) toast(e && e.code === 401 ? 'Přihlášení vypršelo.' : ((e && e.message) || 'Kontrola se nepovedla.')); });
+  }
+
+  function wipeAndReload() {
+    var t = lget('tok');
+    if (t && t.at) { try { fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(t.at), { method: 'POST', mode: 'no-cors' }).catch(function () {}); } catch (e) {} }
+    ['tok', 'owner', 'state', 'ret'].forEach(ldel);
+    return idbDel('data').then(function () { location.replace(redirectUri()); });
+  }
+  function logout() { wipeAndReload(); }
+
+  /* ---------- účet (v hlavní appce) ---------- */
+  function addAccountButton() {
+    var thm = document.getElementById('thm'); if (!thm || document.getElementById('acc')) return;
+    var b = document.createElement('button');
+    b.className = 'thm acc'; b.id = 'acc'; b.type = 'button'; b.setAttribute('aria-label', 'Účet a data');
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20c.9-3.6 3.7-5.4 7.2-5.4s6.3 1.8 7.2 5.4"/></svg>';
+    b.addEventListener('click', openSheet);
+    thm.parentNode.insertBefore(b, thm.nextSibling);
+  }
+  function openSheet() {
+    if (document.querySelector('.gsheetbg')) return;
+    idbGet('data').then(function (cache) {
+      var bg = node('div', 'gsheetbg'), sh = node('div', 'gsheet');
+      sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'Účet a data');
+      var owner = (cache && cache.owner) || lget('owner') || 'neznámý účet';
+      var when = cache && cache.saved ? new Date(cache.saved).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'neuloženo';
+      sh.appendChild(node('h2', null, 'Účet a data'));
+      sh.appendChild(node('div', 'gmeta', 'Přihlášen jako ' + owner + '. Data v tomto zařízení z ' + when + '.'));
+      function close() { bg.remove(); }
+      function btn(label, cls, fn) { var b = node('button', 'gbtn' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', fn); sh.appendChild(b); return b; }
+      if (token() && cache) {
+        btn('Zkontrolovat aktualizaci dat', 'sec', function () { close(); toast('Kontroluji Disk…'); checkUpdate(cache, false); });
+        sh.appendChild(fileBtn('Nahrát nová data ze souboru…', 'gbtn sec', function (f) { close(); importFile(f, cache.fid || null, owner, false); }));
+      } else {
+        btn('Přihlásit znovu (obnoví spojení s Diskem)', 'sec', login);
+      }
+      var armed = false;
+      var out = btn('Odhlásit a smazat data z tohoto zařízení', 'dng', function () {
+        if (!armed) { armed = true; out.textContent = 'Opravdu smazat? Klepni znovu'; return; }
+        wipeAndReload();
+      });
+      btn('Zavřít', 'sec', close);
+      bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+      bg.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+      bg.appendChild(sh); document.body.appendChild(bg);
+      var first = sh.querySelector('button, input'); if (first) first.focus();
+    });
+  }
+
+  /* ---------- spuštění hlavního skriptu ---------- */
+  function boot(data) {
+    if (booted) return; booted = true;
+    window.DATA = data;
+    var g = document.getElementById('gate'); if (g) g.remove();
+    root.classList.add('unlocked');
+    var src = document.getElementById('skola-main');
+    var s = document.createElement('script'); s.text = src.textContent; document.body.appendChild(s);
+    addAccountButton();
+  }
+
+  function start() {
+    var r = handleRedirect();
+    idbGet('data').then(function (cache) {
+      var owner = lget('owner');
+      if (cache && cache.data && (!owner || cache.owner === owner)) {
+        boot(cache.data);
+        if (r && r.ok) checkUpdate(cache, true);
+        else if (r && r.err) toast(r.err);
+        return;
+      }
+      if (r && r.err) return showLogin(r.err);
+      if (!token()) return showLogin();
+      loadFromDrive();
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+</script>
+<script>
+/* Škola · malý engine na grafy (čisté SVG, bez knihoven).
+   SkolaChart.mount(hostElement, spec)  ·  typy: plot | bars | matrix | tree
+   Barvy: série 1–8 = CSS proměnné --s1..--s8 (validovaná paleta, světlý i tmavý režim). */
+(function (g) {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+
+  /* ---------- helpers ---------- */
+  function svg(tag, a, p) { var e = document.createElementNS(NS, tag); if (a) for (var k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; }
+  function html(tag, cls, txt, p) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; if (p) p.appendChild(e); return e; }
+  function nf(v, d) { if (d == null) d = 2; var r = Math.round(v * Math.pow(10, d)) / Math.pow(10, d); return r.toLocaleString('cs-CZ', { maximumFractionDigits: d }); }
+  function col(c) { return 'var(--s' + (c || 1) + ')'; }
+  function niceTicks(min, max, n) {
+    var span = max - min; if (!(span > 0)) return [min];
+    var raw = span / (n || 5), p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p;
+    var s = (f < 1.5 ? 1 : f < 3 ? 2 : f < 3.5 ? 2.5 : f < 7.5 ? 5 : 10) * p, out = [];
+    var i0 = Math.ceil(min / s - 1e-9);
+    for (var i = i0; i * s <= max + s * 1e-9; i++) out.push(parseFloat((i * s).toPrecision(12)));
+    return out;
+  }
+  function tw(s, px) { return String(s).length * (px || 11) * 0.58; }
+  function segsOf(pts) { return (pts && pts.length && Array.isArray(pts[0][0])) ? pts : [pts || []]; }
+  function interp(pts, x) { // y of polyline at x (first hit), or null
+    for (var i = 1; i < pts.length; i++) {
+      var a = pts[i - 1], b = pts[i], lo = Math.min(a[0], b[0]), hi = Math.max(a[0], b[0]);
+      if (x >= lo - 1e-9 && x <= hi + 1e-9 && a[0] !== b[0]) return a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]);
+    }
+    return null;
+  }
+  function halo(t) { t.setAttribute('class', (t.getAttribute('class') || '') + ' halo'); return t; }
+  function text(p, x, y, s, o) {
+    o = o || {}; var t = svg('text', { x: x, y: y, 'text-anchor': o.a || 'start', 'class': 'tx ' + (o.cls || '') }, p);
+    t.textContent = s; if (o.halo !== false) halo(t); return t;
+  }
+
+  /* ---------- tooltip ---------- */
+  function Tip(wrap) {
+    var el = html('div', 'vtip', null, wrap); el.hidden = true;
+    return {
+      show: function (px, py, head, rows) {
+        el.innerHTML = '';
+        if (head) html('div', 'vth', head, el);
+        (rows || []).forEach(function (r) {
+          var d = html('div', 'vtr', null, el);
+          if (r.c) { var k = html('i', 'vtk', null, d); k.style.background = col(r.c); }
+          var v = html('b', null, r.v, d); if (r.n) html('span', null, ' ' + r.n, d);
+        });
+        el.hidden = false;
+        var w = el.offsetWidth, h = el.offsetHeight, W = wrap.clientWidth;
+        var x = Math.max(4, Math.min(px - w / 2, W - w - 4)), y = py - h - 12; if (y < 0) y = py + 16;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+      },
+      hide: function () { el.hidden = true; }
+    };
+  }
+
+  /* ---------- shell: title, caption, legend, svg host, table ---------- */
+  function shell(host, spec) {
+    var root = html('figure', 'chart', null, host);
+    if (spec.title) html('figcaption', 'ct', spec.title, root);
+    if (spec.cap) html('p', 'cc', spec.cap, root);
+    var leg = html('div', 'cl', null, root);
+    var wrap = html('div', 'cw', null, root);
+    return { root: root, leg: leg, wrap: wrap };
+  }
+  function legend(leg, items) {
+    if (items.length < 2) { leg.hidden = true; return; }
+    items.forEach(function (it) {
+      var d = html('span', 'li', null, leg), k = html('i', 'lk ' + (it.k || 'line'), null, d);
+      k.style.setProperty('--c', col(it.c)); if (it.dash) k.className += ' dash';
+      html('span', null, it.n, d);
+    });
+  }
+  function table(root, head, rows) {
+    if (!rows.length) return;
+    var d = html('details', 'vt', null, root); html('summary', null, 'Hodnoty v tabulce', d);
+    var t = html('table', null, null, d), tr = html('tr', null, null, html('thead', null, null, t));
+    head.forEach(function (h) { html('th', null, h, tr); });
+    var tb = html('tbody', null, null, t);
+    rows.forEach(function (r) { var q = html('tr', null, null, tb); r.forEach(function (c, i) { html(i ? 'td' : 'th', null, c, q); }); });
+  }
+
+  /* ================= PLOT ================= */
+  function plot(host, spec) {
+    var sh = shell(host, spec), wrap = sh.wrap, tip = Tip(wrap);
+    var legItems = [];
+    (spec.lines || []).forEach(function (l) { if (l.n && !l.nl) legItems.push({ n: l.n, c: l.c, dash: l.d }); });
+    (spec.areas || []).forEach(function (a) { if (a.n && !a.nl) legItems.push({ n: a.n, c: a.c, k: 'box' }); });
+    legend(sh.leg, legItems);
+
+    var tblRows = (spec.pts || []).filter(function (p) { return p.n || p.l; }).map(function (p) { return [p.n || p.l, nf(p.x), nf(p.y)]; });
+    table(sh.root, [spec.xl || (spec.x && spec.x.label) || 'x', (spec.x && spec.x.label) || 'x', (spec.y && spec.y.label) || 'y'].slice(0, 1).concat([(spec.x && spec.x.label) || 'x', (spec.y && spec.y.label) || 'y']), tblRows);
+
+    function draw() {
+      wrap.querySelectorAll('svg').forEach(function (n) { n.remove(); });
+      tip.hide();
+      var W = Math.max(270, Math.min(wrap.clientWidth || 620, 800));
+      var H = Math.round(Math.max(230, Math.min(W * (spec.ar || 0.62), 440)));
+      var X = spec.x || {}, Y = spec.y || {};
+      var xmin = X.min != null ? X.min : 0, ymin = Y.min != null ? Y.min : 0, xmax = X.max, ymax = Y.max;
+      if (xmax == null || ymax == null) {
+        var mx = 0, my = 0;
+        (spec.lines || []).concat(spec.areas || []).forEach(function (l) { segsOf(l.pts).forEach(function (s) { s.forEach(function (p) { mx = Math.max(mx, p[0]); my = Math.max(my, p[1]); }); }); });
+        (spec.pts || []).forEach(function (p) { mx = Math.max(mx, p.x); my = Math.max(my, p.y); });
+        if (xmax == null) xmax = mx * 1.05; if (ymax == null) ymax = my * 1.08;
+      }
+      var xt = X.ticks || niceTicks(xmin, xmax, W < 420 ? 4 : 6), yt = Y.ticks || niceTicks(ymin, ymax, 5);
+      var gyW = 0;
+      (spec.pts || []).forEach(function (p) { if (p.g === 1 || p.g === true || p.g === 'y') gyW = Math.max(gyW, tw(p.gy != null ? p.gy : nf(p.y), 12)); });
+      (spec.rl || []).forEach(function (r) { if (r.y != null && r.gt) gyW = Math.max(gyW, tw(r.gt, 12)); });
+      var yl = Math.max.apply(null, yt.map(function (v) { return tw(nf(v), 11); }).concat([8, gyW]));
+      var mr = 18, xspan = xmax - xmin;
+      (spec.lines || []).forEach(function (l) {
+        if (!l.lab || l.lab.a === 'end') return;
+        var sg = segsOf(l.pts), q = l.lab.p || sg[sg.length - 1][sg[sg.length - 1].length - 1];
+        if (q[0] >= xmax - xspan * 0.14) mr = Math.max(mr, Math.round(tw(l.lab.t || l.n, 12.5) + (l.lab.dx != null ? l.lab.dx : 6) + 6));
+      });
+      (spec.pts || []).forEach(function (p) { if (p.l && p.a !== 'end' && p.x >= xmax - xspan * 0.14) mr = Math.max(mr, Math.round(tw(p.l, 12.5) + (p.dx != null ? p.dx : 8) + 6)); });
+      var ml = Math.round(yl + 16), mt = 24, mb = 40, iw = W - ml - mr, ih = H - mt - mb;
+      function sx(v) { return ml + (v - xmin) / (xmax - xmin) * iw; }
+      function sy(v) { return mt + ih - (v - ymin) / (ymax - ymin) * ih; }
+
+      var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', 'aria-label': (spec.title || 'Graf') + (spec.alt ? '. ' + spec.alt : '') }, wrap);
+      var cid = 'c' + Math.random().toString(36).slice(2, 8);
+      svg('rect', { x: ml, y: mt, width: iw, height: ih }, svg('clipPath', { id: cid }, svg('defs', null, s)));
+
+      /* guides first (so tick labels near them can be hidden) */
+      var gx = [], gy = [];
+      (spec.pts || []).forEach(function (p) {
+        if (p.g === 1 || p.g === true || p.g === 'x') gx.push({ v: p.x, t: p.gx != null ? p.gx : nf(p.x) });
+        if (p.g === 1 || p.g === true || p.g === 'y') gy.push({ v: p.y, t: p.gy != null ? p.gy : nf(p.y) });
+      });
+      (spec.rl || []).forEach(function (r) { if (r.x != null && r.gt) gx.push({ v: r.x, t: r.gt }); if (r.y != null && r.gt) gy.push({ v: r.y, t: r.gt }); });
+
+      /* grid + ticks */
+      var gg = svg('g', { 'class': 'grid' }, s);
+      yt.forEach(function (v) {
+        var y = sy(v); svg('line', { x1: ml, x2: ml + iw, y1: y, y2: y }, gg);
+        if (!gy.some(function (q) { return Math.abs(sy(q.v) - y) < 12; })) text(s, ml - 7, y + 4, nf(v), { a: 'end', cls: 'tick', halo: false });
+      });
+      xt.forEach(function (v) {
+        var x = sx(v); svg('line', { x1: x, x2: x, y1: mt, y2: mt + ih }, gg);
+        if (!gx.some(function (q) { return Math.abs(sx(q.v) - x) < tw(q.t, 11) / 2 + 12; })) text(s, x, mt + ih + 16, nf(v), { a: 'middle', cls: 'tick', halo: false });
+      });
+      svg('line', { x1: ml, x2: ml + iw, y1: mt + ih, y2: mt + ih, 'class': 'axis' }, s);
+      svg('line', { x1: ml, x2: ml, y1: mt, y2: mt + ih, 'class': 'axis' }, s);
+      if (X.label) text(s, ml + iw, H - 6, X.label, { a: 'end', cls: 'axl', halo: false });
+      if (Y.label) text(s, ml, 13, Y.label, { a: 'start', cls: 'axl', halo: false });
+
+      var plotG = svg('g', { 'clip-path': 'url(#' + cid + ')' }, s);
+
+      /* areas */
+      (spec.areas || []).forEach(function (a) {
+        var d = segsOf(a.pts).map(function (sg) { return 'M' + sg.map(function (p) { return sx(p[0]).toFixed(1) + ' ' + sy(p[1]).toFixed(1); }).join('L') + 'Z'; }).join('');
+        var e = svg('path', { d: d, 'class': 'area' }, plotG); e.style.fill = col(a.c); e.style.fillOpacity = a.o != null ? a.o : 0.14;
+        if (a.line) { e.style.stroke = col(a.c); e.style.strokeWidth = 1.25; e.style.strokeOpacity = .7; }
+      });
+
+      /* reference lines */
+      (spec.rl || []).forEach(function (r) {
+        var e = r.x != null ? svg('line', { x1: sx(r.x), x2: sx(r.x), y1: mt, y2: mt + ih }, plotG) : svg('line', { x1: ml, x2: ml + iw, y1: sy(r.y), y2: sy(r.y) }, plotG);
+        e.setAttribute('class', 'rline');
+        if (r.t) { if (r.x != null) text(s, sx(r.x) + 5, mt + 12, r.t, { cls: 'note' }); else text(s, ml + iw - 4, sy(r.y) - 6, r.t, { a: 'end', cls: 'note' }); }
+      });
+
+      /* lines */
+      (spec.lines || []).forEach(function (l) {
+        var d = segsOf(l.pts).map(function (sg) { return 'M' + sg.map(function (p) { return sx(p[0]).toFixed(1) + ' ' + sy(p[1]).toFixed(1); }).join('L'); }).join('');
+        var e = svg('path', { d: d, 'class': 'ln' }, plotG); e.style.stroke = col(l.c);
+        if (l.w) e.style.strokeWidth = l.w; if (l.d) e.setAttribute('stroke-dasharray', '6 5'); if (l.o != null) e.style.strokeOpacity = l.o;
+      });
+
+      /* hover layer (crosshair) */
+      var hl = (spec.lines || []).filter(function (l) { return l.hov !== false && l.n; });
+      var cross = svg('g', { 'class': 'cross' }, s); cross.style.display = 'none';
+      var cl = svg('line', { y1: mt, y2: mt + ih }, cross);
+      if (hl.length) {
+        var ov = svg('rect', { x: ml, y: mt, width: iw, height: ih, fill: 'transparent', style: 'touch-action:pan-y;cursor:crosshair' }, s);
+        var dots = hl.map(function (l) { var c = svg('circle', { r: 4.5, 'class': 'dot' }, cross); c.style.fill = col(l.c); return c; });
+        ov.addEventListener('pointermove', function (ev) {
+          var r = ov.getBoundingClientRect(), x = xmin + (ev.clientX - r.left) / r.width * (xmax - xmin);
+          var rows = [], any = false;
+          hl.forEach(function (l, i) {
+            var y = null; segsOf(l.pts).forEach(function (sg) { if (y == null) y = interp(sg, x); });
+            if (y == null) { dots[i].style.display = 'none'; return; }
+            any = true; dots[i].style.display = ''; dots[i].setAttribute('cx', sx(x)); dots[i].setAttribute('cy', sy(y)); rows.push({ c: l.c, v: nf(y), n: l.n });
+          });
+          if (!any) { cross.style.display = 'none'; tip.hide(); return; }
+          cross.style.display = ''; cl.setAttribute('x1', sx(x)); cl.setAttribute('x2', sx(x));
+          tip.show(sx(x), mt + 8, (X.label ? X.label.split(' ')[0] : 'x') + ' = ' + nf(x), rows);
+        });
+        ov.addEventListener('pointerleave', function () { cross.style.display = 'none'; tip.hide(); });
+      }
+
+      /* direct labels of lines */
+      (spec.lines || []).forEach(function (l) {
+        if (!l.lab) return; var p = l.lab.p || l.pts[l.pts.length - 1];
+        text(s, sx(p[0]) + (l.lab.dx != null ? l.lab.dx : 6), sy(p[1]) + (l.lab.dy != null ? l.lab.dy : -6), l.lab.t || l.n, { a: l.lab.a || 'start', cls: 'dl' });
+      });
+      (spec.areas || []).forEach(function (a) { if (a.lab) text(s, sx(a.lab[0]), sy(a.lab[1]), a.lab[2], { a: 'middle', cls: 'note' }); });
+      (spec.notes || []).forEach(function (n) { text(s, sx(n.x) + (n.dx || 0), sy(n.y) + (n.dy || 0), n.t, { a: n.a || 'start', cls: n.b ? 'dl' : 'note' }); });
+
+      /* guides + points */
+      var gl = svg('g', { 'class': 'guide' }, s);
+      (spec.pts || []).forEach(function (p) {
+        if (p.g === 1 || p.g === true || p.g === 'x') svg('line', { x1: sx(p.x), x2: sx(p.x), y1: sy(p.y), y2: mt + ih }, gl);
+        if (p.g === 1 || p.g === true || p.g === 'y') svg('line', { x1: ml, x2: sx(p.x), y1: sy(p.y), y2: sy(p.y) }, gl);
+      });
+      gx.forEach(function (q) { text(s, sx(q.v), mt + ih + 16, q.t, { a: 'middle', cls: 'tick b' }); });
+      gy.forEach(function (q) { text(s, ml - 7, sy(q.v) + 4, q.t, { a: 'end', cls: 'tick b' }); });
+      (spec.pts || []).forEach(function (p) {
+        var cx = sx(p.x), cy = sy(p.y), c = svg('circle', { cx: cx, cy: cy, r: p.r || 5, 'class': 'pt' + (p.open ? ' open' : '') }, s);
+        c.style.fill = p.open ? 'var(--vs)' : col(p.c); c.style.stroke = p.open ? col(p.c) : 'var(--vs)';
+        if (p.l) text(s, cx + (p.dx != null ? p.dx : 8), cy + (p.dy != null ? p.dy : -8), p.l, { a: p.a || 'start', cls: 'pl' });
+        var hit = svg('circle', { cx: cx, cy: cy, r: 14, fill: 'transparent', tabindex: 0, 'aria-label': (p.n || p.l || '') + ' (' + nf(p.x) + '; ' + nf(p.y) + ')' }, s);
+        var show = function () { cross.style.display = 'none'; tip.show(cx, cy, p.n || p.l || null, [{ v: '(' + nf(p.x) + '; ' + nf(p.y) + ')' }]); };
+        hit.addEventListener('pointerenter', show); hit.addEventListener('focus', show);
+        hit.addEventListener('pointerleave', function () { tip.hide(); }); hit.addEventListener('blur', function () { tip.hide(); });
+      });
+    }
+    draw();
+    var last = wrap.clientWidth, tmr;
+    if (g.ResizeObserver) new ResizeObserver(function () {
+      if (!wrap.isConnected) return; var w = wrap.clientWidth; if (Math.abs(w - last) < 2) return; last = w; clearTimeout(tmr); tmr = setTimeout(draw, 60);
+    }).observe(wrap);
+  }
+
+  /* ================= BARS (horizontální, i záporné hodnoty) ================= */
+  function bars(host, spec) {
+    var sh = shell(host, spec), wrap = sh.wrap, tip = Tip(wrap), ser = spec.series, cats = spec.cats, unit = spec.unit || '';
+    legend(sh.leg, ser.length > 1 ? ser.map(function (s) { return { n: s.n, c: s.c, k: 'box' }; }) : []);
+    var rows = []; cats.forEach(function (c, i) { var r = [c]; ser.forEach(function (s) { r.push(nf(s.v[i]) + unit); }); rows.push(r); });
+    table(sh.root, [''].concat(ser.map(function (s) { return s.n; })), rows);
+    function draw() {
+      wrap.querySelectorAll('svg').forEach(function (n) { n.remove(); }); tip.hide();
+      var W = Math.max(270, Math.min(wrap.clientWidth || 620, 800)), bh = 18, gap = 5, labH = 20, rowGap = 14;
+      var vals = []; ser.forEach(function (s) { s.v.forEach(function (v) { vals.push(v); }); });
+      var vmin = Math.min(0, Math.min.apply(null, vals)), vmax = Math.max(0, Math.max.apply(null, vals));
+      var lw = Math.max.apply(null, vals.map(function (v) { return tw(nf(v) + unit, 12) + 8; }));
+      var ml = (vmin < 0 ? lw : 8), mr = (vmax > 0 ? lw : 8) + 8, iw = W - ml - mr;
+      var rh = labH + ser.length * (bh + gap) - gap + rowGap, H = 8 + cats.length * rh + 26;
+      var span = vmax - vmin || 1;
+      function sx(v) { return ml + (v - vmin) / span * iw; }
+      var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', 'aria-label': spec.title || 'Graf' }, wrap);
+      var gg = svg('g', { 'class': 'grid' }, s);
+      niceTicks(vmin, vmax, W < 420 ? 3 : 5).forEach(function (v) {
+        var x = sx(v); svg('line', { x1: x, x2: x, y1: 4, y2: H - 22 }, gg);
+        text(s, x, H - 6, nf(v), { a: 'middle', cls: 'tick', halo: false });
+      });
+      svg('line', { x1: sx(0), x2: sx(0), y1: 4, y2: H - 22, 'class': 'axis' }, s);
+      cats.forEach(function (c, i) {
+        var y0 = 8 + i * rh; text(s, ml, y0 + 13, c, { cls: 'cat', halo: false });
+        ser.forEach(function (se, j) {
+          var v = se.v[i], y = y0 + labH + j * (bh + gap), x0 = sx(0), x1 = sx(v), r = Math.min(4, Math.abs(x1 - x0) / 2), d;
+          if (Math.abs(x1 - x0) < 0.5) d = 'M' + x0 + ' ' + y + 'h1v' + bh + 'h-1z';
+          else if (v >= 0) d = 'M' + x0 + ' ' + y + 'H' + (x1 - r) + 'Q' + x1 + ' ' + y + ' ' + x1 + ' ' + (y + r) + 'V' + (y + bh - r) + 'Q' + x1 + ' ' + (y + bh) + ' ' + (x1 - r) + ' ' + (y + bh) + 'H' + x0 + 'Z';
+          else d = 'M' + x0 + ' ' + y + 'H' + (x1 + r) + 'Q' + x1 + ' ' + y + ' ' + x1 + ' ' + (y + r) + 'V' + (y + bh - r) + 'Q' + x1 + ' ' + (y + bh) + ' ' + (x1 + r) + ' ' + (y + bh) + 'H' + x0 + 'Z';
+          var b = svg('path', { d: d, 'class': 'bar', tabindex: 0 }, s); b.style.fill = col(se.c);
+          text(s, v >= 0 ? x1 + 6 : x1 - 6, y + bh - 5, nf(v) + unit, { a: v >= 0 ? 'start' : 'end', cls: 'val' });
+          var show = function () { tip.show((x0 + x1) / 2, y, c, [{ c: se.c, v: nf(v) + unit, n: se.n }]); };
+          b.addEventListener('pointerenter', show); b.addEventListener('focus', show);
+          b.addEventListener('pointerleave', function () { tip.hide(); }); b.addEventListener('blur', function () { tip.hide(); });
+        });
+      });
+    }
+    draw();
+    var last = wrap.clientWidth, tmr;
+    if (g.ResizeObserver) new ResizeObserver(function () { if (!wrap.isConnected) return; var w = wrap.clientWidth; if (Math.abs(w - last) < 2) return; last = w; clearTimeout(tmr); tmr = setTimeout(draw, 60); }).observe(wrap);
+  }
+
+  /* ================= MATRIX (hra ve strategické formě) ================= */
+  function matrix(host, spec) {
+    var sh = shell(host, spec); sh.leg.hidden = true;
+    var C = spec.cells, R = spec.rows, K = spec.cols, p1 = spec.p1 || 'Hráč 1', p2 = spec.p2 || 'Hráč 2';
+    var br1 = [], br2 = [];
+    for (var i = 0; i < R.length; i++) { br1[i] = []; br2[i] = []; }
+    for (var j = 0; j < K.length; j++) { var m = -Infinity; for (i = 0; i < R.length; i++) m = Math.max(m, C[i][j][0]); for (i = 0; i < R.length; i++) br1[i][j] = C[i][j][0] === m; }
+    for (i = 0; i < R.length; i++) { m = -Infinity; for (j = 0; j < K.length; j++) m = Math.max(m, C[i][j][1]); for (j = 0; j < K.length; j++) br2[i][j] = C[i][j][1] === m; }
+    var key = html('p', 'mxk', null, sh.root);
+    var a = html('span', null, null, key); html('i', 'lk box', null, a).style.setProperty('--c', col(1)); html('span', null, p1 + ' (řádky)', a);
+    var b = html('span', null, null, key); html('i', 'lk box', null, b).style.setProperty('--c', col(2)); html('span', null, p2 + ' (sloupce)', b);
+    var wrap = html('div', 'cw mx', null, sh.root), t = html('table', 'vmx', null, wrap);
+    var h1 = html('tr', null, null, html('thead', null, null, t));
+    html('th', null, null, h1); var hh = html('th', 'pl2', p2, h1); hh.colSpan = K.length;
+    var h2 = html('tr', null, null, t.tHead); html('th', null, null, h2); K.forEach(function (k) { html('th', 'cn', k, h2); });
+    var tb = html('tbody', null, null, t);
+    R.forEach(function (r, i) {
+      var tr = html('tr', null, null, tb), th = html('th', 'rn', null, tr); html('small', null, p1, th); html('span', null, r, th);
+      K.forEach(function (k, j) {
+        var ne = br1[i][j] && br2[i][j], td = html('td', ne ? 'ne' : '', null, tr);
+        var x = html('span', 'p1' + (br1[i][j] ? ' br' : ''), nf(C[i][j][0]), td); html('span', 'sep', ';', td);
+        var y = html('span', 'p2' + (br2[i][j] ? ' br' : ''), nf(C[i][j][1]), td);
+        if (ne) html('em', null, 'NE', td);
+      });
+    });
+    html('p', 'mxn', spec.note || 'Podtržené číslo = nejlepší odpověď daného hráče na tah soupeře. Pole, kde jsou podtržená obě čísla, je Nashova rovnováha (NE).', sh.root);
+    if (spec.ne === false) sh.root.querySelectorAll('td.ne').forEach(function (n) { n.className = ''; });
+  }
+
+  /* ================= TREE (extenzivní forma) ================= */
+  function tree(host, spec) {
+    var sh = shell(host, spec), wrap = sh.wrap; sh.leg.hidden = true;
+    if (spec.payl) html('p', 'mxn', spec.payl, sh.root);
+    function draw() {
+      wrap.querySelectorAll('svg').forEach(function (n) { n.remove(); });
+      var W = Math.max(280, Math.min(wrap.clientWidth || 620, 760)), payW = 58, ml = 6, mt = 10, rowH = W < 420 ? 62 : 54;
+      var leaves = 0, maxD = 0;
+      (function walk(n, d) {
+        n._d = d; maxD = Math.max(maxD, d); n._w = n.ch ? Math.max(34, tw(n.p || '', 12) + 16) : 0;
+        if (!n.ch) { n._y = leaves++; return; }
+        n.ch.forEach(function (e) { walk(e.to, d + 1); }); n._y = n.ch.reduce(function (s, e) { return s + e.to._y; }, 0) / n.ch.length;
+      })(spec.root, 0);
+      var H = mt + leaves * rowH + 4, avail = W - ml - payW - 8 - spec.root._w / 2, colW = avail / Math.max(1, maxD);
+      var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, role: 'img', 'aria-label': spec.title || 'Strom hry' }, wrap);
+      function cx(n) { return ml + spec.root._w / 2 + n._d * colW; } function cy(n) { return mt + n._y * rowH + rowH / 2; }
+      var edges = svg('g', null, s), nodes = svg('g', null, s), labs = svg('g', null, s);
+      (function walk(n) {
+        if (!n.ch) return;
+        n.ch.forEach(function (e) {
+          var c = e.to, x1 = cx(n) + n._w / 2, y1 = cy(n), x2 = c.ch ? cx(c) - c._w / 2 : cx(c), y2 = cy(c);
+          svg('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'te' + (e.win ? ' win' : '') }, edges);
+          var wL = tw(e.a, 11.5), lx = x1 + (x2 - x1) * 0.5, ly = y1 + (y2 - y1) * 0.5;
+          lx = Math.min(lx, x2 - wL / 2 - 8); lx = Math.max(lx, x1 + wL / 2 + 4);
+          ly = y1 + (y2 - y1) * ((lx - x1) / ((x2 - x1) || 1));
+          text(labs, lx, ly + (y2 === y1 ? -8 : (y2 < y1 ? -9 : 15)), e.a, { a: 'middle', cls: 'el' });
+          if (!c.ch) { svg('circle', { cx: x2, cy: y2, r: 4, 'class': 'tn leaf' }, nodes); text(labs, x2 + 10, y2 + 4, c.pay, { cls: 'val' + (e.win ? ' w' : '') }); }
+          walk(c);
+        });
+      })(spec.root);
+      (function walk(n) {
+        if (!n.ch) return;
+        var r = svg('rect', { x: cx(n) - n._w / 2, y: cy(n) - 12, width: n._w, height: 24, rx: 12, 'class': 'tpill' }, nodes);
+        text(nodes, cx(n), cy(n) + 4, n.p, { a: 'middle', cls: 'pl', halo: false });
+        n.ch.forEach(function (e) { walk(e.to); });
+      })(spec.root);
+    }
+    draw();
+    var last = wrap.clientWidth, tmr;
+    if (g.ResizeObserver) new ResizeObserver(function () { if (!wrap.isConnected) return; var w = wrap.clientWidth; if (Math.abs(w - last) < 2) return; last = w; clearTimeout(tmr); tmr = setTimeout(draw, 60); }).observe(wrap);
+  }
+
+  g.SkolaChart = {
+    mount: function (host, spec) {
+      try { ({ plot: plot, bars: bars, matrix: matrix, tree: tree }[spec.t || 'plot'])(host, spec); }
+      catch (e) { var d = document.createElement('div'); d.className = 'chart-err'; d.textContent = 'Graf se nepodařilo vykreslit.'; host.appendChild(d); if (g.console) console.error(e); }
+    },
+    mountAll: function (root, charts) { (charts || []).forEach(function (c) { g.SkolaChart.mount(root, c); }); }
+  };
+})(window);
+
+</script>
+<script type="text/plain" id="skola-main">
+(function(){
+'use strict';
+var D = window.DATA;
+var IS = D.isBase;
+var NOW = new Date();
+var $app = document.getElementById('app');
+var st = {view:'home', course:null, tab:'prehled', leaflet:null, fcourse:'all', showPast:false, showClasses:false, onlyBasic:false, openSol:{}, kind:'all'};
+
+/* ---------- storage (best effort) ---------- */
+var store = {
+  get:function(k,d){try{var v=localStorage.getItem('skola.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set:function(k,v){try{localStorage.setItem('skola.'+k,JSON.stringify(v))}catch(e){}}
+};
+var done = store.get('done',{});      // deadline id -> true
+var seen = store.get('seen',{});      // leaflet task id -> true
+var theme = store.get('theme','auto');
+
+/* ---------- helpers ---------- */
+var DAYS=['Ne','Po','Út','St','Čt','Pá','So'];
+var MSHORT=['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
+var MONTHS=['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function url(u){ if(!u) return ''; return /^https?:/.test(u)?u:IS+u }
+function ext(u){var m=/\.([a-z0-9]{2,5})(?:$|\?)/i.exec(u||'');return m?m[1]:'web'}
+function course(id){return D.courses.filter(function(c){return c.id===id})[0]}
+function dt(d,tm){return new Date(d+'T'+(tm||'23:59')+':00')}
+function fmtD(d){var x=dt(d,'12:00');return DAYS[x.getDay()]+' '+x.getDate()+'. '+(x.getMonth()+1)+'.'}
+function daysTo(d,tm){var ms=dt(d,tm||'23:59')-NOW;return ms/864e5}
+function rel(d,tm){var n=daysTo(d,tm);if(n<0)return 'proběhlo';if(n<1){var h=Math.round(n*24);return h<=1?'za hodinu':'za '+h+' h'}var k=Math.ceil(n);return k===1?'zítra':'za '+k+' '+(k<5?'dny':'dní')}
+function icon(id){return '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(D.icons[id]||'')+'</svg>'}
+var CV='<svg class="cv" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6"/></svg>';
+var BACK='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 3.5 6 10l6.5 6.5"/></svg>';
+function ring(p,sz,col){
+  sz=sz||44; var r=(sz-6)/2, c=2*Math.PI*r, m=sz/2;
+  return '<svg class="ring" width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'" aria-hidden="true"><circle cx="'+m+'" cy="'+m+'" r="'+r+'" fill="none" stroke="var(--fill)" stroke-width="5"/>'+(p>0.004?'<circle cx="'+m+'" cy="'+m+'" r="'+r+'" fill="none" stroke="'+(col||'var(--tint)')+'" stroke-width="5" stroke-linecap="round" stroke-dasharray="'+(c*Math.min(1,p)).toFixed(1)+' '+c.toFixed(1)+'" transform="rotate(-90 '+m+' '+m+')"/>':'')+'</svg>';
+}
+/* rich text: **bold**, `code`, ^{sup}, _{sub}, blank-line paragraphs, "- " lists */
+function inl(s){
+  s=esc(s);
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\^\{([^}]*)\}/g,'<sup>$1</sup>').replace(/_\{([^}]*)\}/g,'<sub>$1</sub>');
+  return s;
+}
+function rt(s){
+  if(s==null) return '';
+  return String(s).split(/\n\s*\n/).map(function(b){
+    var lines=b.split('\n');
+    if(lines.every(function(l){return /^- /.test(l)})) return '<ul>'+lines.map(function(l){return '<li>'+inl(l.slice(2))+'</li>'}).join('')+'</ul>';
+    if(/^GRAF:/.test(b)) return '<p class="graph">'+inl(b)+'</p>';
+    return '<p>'+lines.map(inl).join('<br>')+'</p>';
+  }).join('');
+}
+
+/* ---------- flatten deadlines ---------- */
+function allDeadlines(){
+  var out=[];
+  D.courses.forEach(function(c){
+    (c.deadlines||[]).forEach(function(x,i){ out.push(Object.assign({cid:c.id,key:c.id+'#'+(x.id||i),kind:x.k||'termin'},x)); });
+    (c.plan||[]).forEach(function(x,i){ if(x.k==='lecture'||x.k==='seminar'||x.k==='block') out.push({cid:c.id,key:c.id+'~'+i,kind:'vyuka',d:x.d,tm:x.tm,t:(x.k==='lecture'?'Přednáška: ':'Výuka: ')+x.t,note:x.n,est:x.est,u:null}); });
+  });
+  out.sort(function(a,b){return dt(a.d,a.tm||'00:00')-dt(b.d,b.tm||'00:00')});
+  return out;
+}
+var KIND={odevzdani:'Odevzdání',test:'Test',kvis:'KvIS',registrace:'Registrace',zkouska:'Zkouška',termin:'Termín',vyuka:'Výuka',obhajoba:'Obhajoba',konzultace:'Konzultace'};
+function nextDl(cid){
+  return allDeadlines().filter(function(x){return x.cid===cid&&x.kind!=='vyuka'&&!done[x.key]&&daysTo(x.d,x.tm)>=0})[0];
+}
+/* postup v leafletech: úlohy z hotových leafletů a kolik jich mám odškrtnutých („Rozumím postupu“) */
+function prog(cid){
+  var tot=0,sn=0,lh=0,ln=0;
+  D.courses.forEach(function(c){
+    if(cid&&c.id!==cid) return;
+    (D.leaflets[c.id]||[]).forEach(function(l){
+      ln++; if(l.status==='hotovo'&&(l.tasks||[]).length){ lh++; l.tasks.forEach(function(t){ tot++; if(seen[l.id+':'+t.n]) sn++; }); }
+    });
+  });
+  return {tot:tot,seen:sn,p:tot?sn/tot:0,lh:lh,ln:ln};
+}
+
+/* ---------- views ---------- */
+var NAVI={
+  home:'<svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>',
+  deadlines:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
+  week:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>'
+};
+function viewNav(){
+  var items=[['home','Předměty'],['deadlines','Termíny'],['week','Týden']];
+  var nv=items.map(function(i){return '<button data-go="'+i[0]+'"'+((st.view===i[0]||(st.view==='course'&&i[0]==='home'))?' aria-current="page"':'')+'>'+NAVI[i[0]]+'<span>'+i[1]+'</span></button>'}).join('');
+  document.getElementById('nav').innerHTML=nv; document.getElementById('tabbar').innerHTML=nv;
+}
+var THEME_ICON={
+  auto:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M10 3a7 7 0 0 1 0 14Z" fill="currentColor"/></svg>',
+  light:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="10" cy="10" r="3.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>',
+  dark:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M16.5 11.6A6.8 6.8 0 0 1 8.4 3.5 6.8 6.8 0 1 0 16.5 11.6Z"/></svg>'
+};
+var THEME_NAME={auto:'podle systému',light:'světlý',dark:'tmavý'};
+function applyTheme(){
+  var r=document.documentElement; if(theme==='auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme',theme);
+  var b=document.getElementById('thm'); b.innerHTML=THEME_ICON[theme]; b.setAttribute('aria-label','Vzhled: '+THEME_NAME[theme]); b.title='Vzhled: '+THEME_NAME[theme];
+}
+
+function tile(c){
+  var n=nextDl(c.id), lf=D.leaflets[c.id]||[], pg=prog(c.id);
+  var solved=lf.filter(function(l){return l.tasks&&l.tasks.length&&l.status==='hotovo'}).length;
+  var nx=n?'<div class="nx"><i></i><span><b>'+esc(fmtD(n.d))+'</b> · '+esc(n.t)+'</span></div>':'<div class="nx none"><i></i><span class="muted">Žádný blížící se termín</span></div>';
+  var top=pg.tot?'<span class="pr" title="Rozumím postupu: '+pg.seen+' z '+pg.tot+' úloh">'+ring(pg.p,42,'var(--c)')+'<b>'+Math.round(pg.p*100)+'</b></span>':'';
+  return '<button class="tile" data-course="'+c.id+'" style="--h:'+c.hue+'">'+
+    '<div class="th"><span class="sq">'+icon(c.icon)+'</span>'+top+'</div>'+
+    '<div><div class="nm">'+esc(c.name)+'</div><div class="cd"><span class="mono">'+esc(c.code)+'</span> · '+c.credits+' kr · '+esc(c.ending)+'</div></div>'+
+    '<div class="chips">'+(lf.length?'<span class="chip c">leaflety '+solved+'/'+lf.length+'</span>':'')+(c.badge?'<span class="chip '+(c.badge.lvl||'')+'">'+esc(c.badge.t)+'</span>':'')+'</div>'+nx+'</button>';
+}
+
+function viewHome(){
+  var upAll=allDeadlines().filter(function(x){return x.kind!=='vyuka'&&!done[x.key]&&daysTo(x.d,x.tm)>=0});
+  var up=upAll.slice(0,6), first=upAll[0], week=upAll.filter(function(x){return daysTo(x.d,x.tm)<=7}).length;
+  var pg=prog();
+  var notices=(D.notices||[]).filter(function(n){return !n.until||dt(n.until,'23:59')>NOW});
+  var crit=notices.filter(function(n){return n.lvl==='crit'}), rest=notices.filter(function(n){return n.lvl!=='crit'});
+  var h='<h1 class="lt">Škola</h1><p class="lt-sub">'+esc(D.semester)+' · '+esc(D.student.program)+'</p>';
+  if(crit.length) h+='<div class="notices">'+crit.map(function(n){return '<div class="notice crit"><b>'+esc(n.h)+'</b><div>'+inl(n.t)+'</div></div>'}).join('')+'</div>';
+  h+='<div class="kpis">'+
+    '<button class="kpi'+(first&&daysTo(first.d,first.tm)<=2?' hot':'')+'" data-go="deadlines"><span class="kl">Nejbližší termín</span><span class="kv2">'+(first?rel(first.d,first.tm):'—')+'</span><span class="ks">'+(first?esc(course(first.cid).short)+' · '+esc(first.t):'Nic nehoří')+'</span></button>'+
+    '<button class="kpi" data-go="deadlines"><span class="kl">Do 7 dní</span><span class="kv2">'+week+'</span><span class="ks">'+(week===1?'otevřený termín':(week>=2&&week<=4?'otevřené termíny':'otevřených termínů'))+'</span></button>'+
+    '<div class="kpi"><span class="kl">Rozumím postupu</span><span class="kv2">'+Math.round(pg.p*100)+' %</span><span class="ks">'+pg.seen+' z '+pg.tot+' úloh</span>'+ring(pg.p,38)+'</div>'+
+    '<div class="kpi"><span class="kl">Hotová řešení</span><span class="kv2">'+pg.lh+' / '+pg.ln+'</span><span class="ks">leafletů a seminářů</span></div></div>';
+  h+='<h2 class="sh">Předměty<small>'+D.courses.length+' předmětů · '+D.courses.reduce(function(a,c){return a+c.credits},0)+' kreditů</small></h2><div class="tiles">'+D.courses.map(tile).join('')+'</div>';
+  h+='<h2 class="sh">Nejbližší termíny<small>celý seznam v záložce Termíny</small></h2><div class="group">'+up.map(function(x){
+    var c=course(x.cid), d=dt(x.d,'12:00'), n=daysTo(x.d,x.tm);
+    return '<button class="row" data-course="'+c.id+'" data-tab="terminy" style="--h:'+c.hue+'"><span class="dbadge"><b>'+d.getDate()+'</b><span>'+MSHORT[d.getMonth()]+'</span></span><span class="rb"><span class="rt">'+esc(x.t)+'</span><div class="rs">'+esc(DAYS[d.getDay()])+(x.tm?' '+x.tm:'')+' · '+esc(c.short)+'</div></span><span class="rr'+(n<=2?' hot':'')+'">'+rel(x.d,x.tm)+'</span>'+CV+'</button>';
+  }).join('')+'</div>';
+  if(rest.length) h+='<h2 class="sh">Upozornění</h2><div class="group">'+rest.map(function(n){return '<div class="row nrow"><i class="nd '+n.lvl+'"></i><div class="rb"><div class="rt">'+esc(n.h)+'</div><div class="rs">'+inl(n.t)+'</div></div></div>'}).join('')+'</div>';
+  h+='<p class="muted" style="margin:26px 2px 0;font-size:13px">Data z IS MU stav k '+esc(D.updated)+'. Odkazy na materiály vedou do IS (je nutné být přihlášený). Termíny označené „odvozeno“ jsem dopočítal z rozvrhu – ověř je v IS.</p>';
+  return h;
+}
+
+function tabsFor(c){
+  var t=[['prehled','Přehled'],['podminky','Podmínky']];
+  if((c.deadlines||[]).length) t.push(['terminy','Termíny',c.deadlines.length]);
+  if((c.plan||[]).length) t.push(['plan','Plán výuky',c.plan.length]);
+  t.push(['materialy','Materiály']);
+  if(D.leaflets[c.id]) t.push([ 'leaflety', c.leafletLabel||'Leaflety', D.leaflets[c.id].length ]);
+  return t;
+}
+
+function viewCourse(){
+  var c=course(st.course); if(!c) return viewHome();
+  var h='<button class="back" data-go="home">'+BACK+'Předměty</button>';
+  h+='<div style="--h:'+c.hue+'"><div class="chead"><span class="sq">'+icon(c.icon)+'</span><div class="ti"><h1>'+esc(c.name)+'</h1><div class="sub"><span class="chip c mono">'+esc(c.code)+'</span><span class="chip">'+c.credits+' kr</span><span class="chip">'+esc(c.ending)+'</span><span class="chip">'+esc(c.load)+'</span>'+(c.lang?'<span class="chip">'+esc(c.lang)+'</span>':'')+'</div></div></div>';
+  h+='<div class="tabs" role="tablist">'+tabsFor(c).map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(st.tab===t[0])+'">'+t[1]+(t[2]?'<span class="n">'+t[2]+'</span>':'')+'</button>'}).join('')+'</div>';
+  h+='<div class="panel">'+panel(c)+'</div></div>';
+  return h;
+}
+
+function panel(c){
+  switch(st.tab){
+    case 'podminky': return pPodminky(c);
+    case 'terminy': return pTerminy(c);
+    case 'plan': return pPlan(c);
+    case 'materialy': return pMaterialy(c);
+    case 'leaflety': return pLeaflety(c);
+    default: return pPrehled(c);
+  }
+}
+
+function pPrehled(c){
+  var h='<div class="cols">';
+  h+='<div class="card"><h3>Kdy a kde</h3><dl class="kv">'+(c.where||[]).map(function(w){return '<dt>'+esc(w.what)+'</dt><dd>'+esc(w.when)+(w.room?' · <span class="mono">'+esc(w.room)+'</span>':'')+(w.who?'<br><span class="muted">'+esc(w.who)+'</span>':'')+'</dd>'}).join('')+'</dl></div>';
+  h+='<div class="card"><h3>Vyučující</h3><dl class="kv">'+(c.people||[]).map(function(p){return '<dt>'+esc(p.role)+'</dt><dd>'+esc(p.name)+(p.mail?'<br><span class="mono muted">'+esc(p.mail)+'</span>':'')+'</dd>'}).join('')+'</dl></div>';
+  h+='</div>';
+  if(c.summary) h+='<div class="card" style="margin-top:12px"><h3>O co jde</h3>'+rt(c.summary)+'</div>';
+  if((c.myPoints||[]).length){
+    h+='<div class="card" style="margin-top:12px"><h3>Moje body a docházka</h3><div class="stat">'+c.myPoints.map(function(p){return '<div><b>'+esc(p.v)+'</b><span>'+esc(p.l)+'</span></div>'}).join('')+'</div>'+(c.myNote?'<p class="muted" style="margin:10px 0 0;font-size:13.5px">'+inl(c.myNote)+'</p>':'')+'</div>';
+  }
+  if((c.watch||[]).length){
+    h+='<div class="card" style="margin-top:12px"><h3>Na co si dát pozor</h3><ul class="list">'+c.watch.map(function(w){return '<li>'+inl(w)+'</li>'}).join('')+'</ul></div>';
+  }
+  var nx=allDeadlines().filter(function(x){return x.cid===c.id&&x.kind!=='vyuka'&&!done[x.key]&&daysTo(x.d,x.tm)>=0}).slice(0,3);
+  if(nx.length){
+    h+='<div class="card" style="margin-top:12px"><h3>Nejbližší termíny</h3><ul class="list">'+nx.map(function(x){return '<li><b>'+esc(fmtD(x.d))+(x.tm?' '+x.tm:'')+'</b> · '+esc(x.t)+' <span class="muted">('+rel(x.d,x.tm)+')</span></li>'}).join('')+'</ul></div>';
+  }
+  h+='<h2 class="sh" style="font-size:18px">Odkazy do IS</h2><div class="links">'+(c.links||[]).map(function(l){return linkEl(l)}).join('')+'</div>';
+  return h;
+}
+
+function linkEl(l){
+  var u=url(l.u); return '<a href="'+esc(u)+'" target="_blank" rel="noopener"><span class="ext">'+esc(l.x||ext(l.u))+'</span><span>'+esc(l.t)+(l.s?'<small>'+esc(l.s)+'</small>':'')+'</span></a>';
+}
+
+function pPodminky(c){
+  var h='';
+  (c.conditions||[]).forEach(function(g){
+    h+='<div class="card" style="margin-bottom:12px"><h3>'+esc(g.h)+'</h3>'+(g.items?'<ul class="list">'+g.items.map(function(i){return '<li>'+inl(i)+'</li>'}).join('')+'</ul>':'')+
+       (g.table?'<div class="scroll-x"><table><thead><tr>'+g.table.head.map(function(x){return '<th>'+esc(x)+'</th>'}).join('')+'</tr></thead><tbody>'+g.table.rows.map(function(r){return '<tr>'+r.map(function(x){return '<td>'+inl(x)+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>':'')+'</div>';
+  });
+  if(c.source) h+='<p class="muted" style="font-size:13px;margin:4px 2px">Zdroj: '+esc(c.source)+'</p>';
+  return h||'<div class="empty">Podmínky nejsou k dispozici.</div>';
+}
+
+function dlItem(x,showCourse){
+  var c=course(x.cid), n=daysTo(x.d,x.tm), past=n<0, isDone=!!done[x.key];
+  var cls='dli'+(isDone?' done':'')+(past?' pastd':'')+((!past&&n<=2&&x.kind!=='vyuka')?' urgent':(!past&&n<=7&&x.kind!=='vyuka'?' soon':''));
+  return '<div class="'+cls+'" style="--h:'+c.hue+'"><input class="chk" type="checkbox" data-done="'+esc(x.key)+'"'+(isDone?' checked':'')+' aria-label="Hotovo"><div class="when"><b>'+esc(fmtD(x.d))+'</b><span>'+(x.tm?esc(x.tm)+' · ':'')+rel(x.d,x.tm)+'</span></div>'+
+    '<div class="body"><div class="dtt">'+esc(x.t)+(x.est?'<span class="flag">odvozeno</span>':'')+'</div>'+(x.note?'<div class="dnote">'+inl(x.note)+'</div>':'')+
+    '<div class="meta">'+(showCourse?'<span class="chip c">'+esc(c.short)+'</span>':'')+'<span class="chip">'+esc(KIND[x.kind]||x.kind)+'</span>'+(x.u?'<a class="chip info" href="'+esc(url(x.u))+'" target="_blank" rel="noopener">otevřít v IS ↗</a>':'')+'</div></div></div>';
+}
+
+function pTerminy(c){
+  var list=allDeadlines().filter(function(x){return x.cid===c.id&&x.kind!=='vyuka'});
+  var up=list.filter(function(x){return daysTo(x.d,x.tm)>=0}), pa=list.filter(function(x){return daysTo(x.d,x.tm)<0});
+  var h=up.length?'<div class="dl">'+up.map(function(x){return dlItem(x,false)}).join('')+'</div>':'<div class="empty">Žádné nadcházející termíny.</div>';
+  if(pa.length) h+='<details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Proběhlé ('+pa.length+')</summary><div class="dl" style="margin-top:8px">'+pa.map(function(x){return dlItem(x,false)}).join('')+'</div></details>';
+  return h;
+}
+
+function pPlan(c){
+  var rows=(c.plan||[]);
+  if(!rows.length) return '<div class="empty">Plán výuky není k dispozici.</div>';
+  var nowIdx=-1; rows.forEach(function(r,i){ if(nowIdx<0&&daysTo(r.d,'23:59')>=0) nowIdx=i; });
+  var K={lecture:'přednáška',seminar:'seminář',block:'blok',test:'test',holiday:'volno',info:'info'};
+  return '<div class="card" style="padding:6px 6px"><div class="scroll-x"><table><thead><tr><th>Datum</th><th>Téma</th><th>Typ</th><th>Poznámka</th></tr></thead><tbody>'+rows.map(function(r,i){
+    return '<tr class="'+(i===nowIdx?'now':(daysTo(r.d,'23:59')<0?'past':''))+'"><td class="num">'+esc(fmtD(r.d))+(r.tm?' '+esc(r.tm):'')+'</td><td>'+inl(r.t)+(r.est?'<span class="flag">odvozeno</span>':'')+'</td><td>'+esc(K[r.k]||r.k||'')+'</td><td>'+inl(r.n||'')+'</td></tr>';
+  }).join('')+'</tbody></table></div></div>';
+}
+
+function pMaterialy(c){
+  var h='';
+  (c.materials||[]).forEach(function(g){
+    h+='<div class="mg"><h3>'+esc(g.g)+'</h3>'+(g.note?'<p class="muted" style="margin:0 2px 6px;font-size:13.5px">'+inl(g.note)+'</p>':'')+'<div class="links">'+g.items.map(linkEl).join('')+'</div></div>';
+  });
+  h+='<p class="muted" style="font-size:13px;margin:4px 2px">Soubory nejsou stažené ani zkopírované – odkazy otevírají originály v IS MU.</p>';
+  return h;
+}
+
+/* ---------- leaflets ---------- */
+function pLeaflety(c){
+  var L=D.leaflets[c.id]||[];
+  if(st.leaflet){ var l=L.filter(function(x){return x.id===st.leaflet})[0]; if(l) return leafletView(c,l); }
+  var h='';
+  if(c.leafletIntro) h+='<div class="card" style="margin-bottom:12px">'+rt(c.leafletIntro)+'</div>';
+  h+='<div class="lf-grid">'+L.map(function(l){
+    var nt=(l.tasks||[]).length, ns=(l.tasks||[]).filter(function(t){return seen[l.id+':'+t.n]}).length;
+    return '<button class="lf" data-leaflet="'+l.id+'"><span class="no">'+esc(l.id)+'</span><span class="tt">'+esc(l.title)+'</span><span class="muted" style="font-size:13px">'+esc(l.when||'')+'</span>'+
+      '<span class="chips">'+(l.status==='hotovo'?'<span class="chip ok">řešení hotová</span>':(l.status==='oficialni'?'<span class="chip info">oficiální řešení v IS</span>':'<span class="chip warn">řešení se připravují</span>'))+(nt?'<span class="chip">'+nt+' úkolů</span>':'')+'</span>'+
+      (nt?'<span class="bar2"><i style="width:'+Math.round(100*ns/nt)+'%"></i></span>':'')+'</button>';
+  }).join('')+'</div>';
+  return h;
+}
+
+var VER={key:['ok','✓ shoda s klíčem z leafletu'],calc:['info','✓ ověřeno výpočtem'],theory:['','teorie, vlastní formulace'],unver:['warn','neověřeno – zkontroluj'],keyx:['warn','částečně v souladu s klíčem']};
+
+function leafletView(c,l){
+  var tasks=(l.tasks||[]).filter(function(t){return !st.onlyBasic||t.m==='!'||(t.parts||[]).some(function(p){return p.m==='!'})});
+  var h='<button class="back" data-leaflet="" style="padding-top:0">'+BACK+(c.leafletLabel||'Leaflety')+'</button>';
+  h+='<h2 class="sh" style="margin-top:6px">'+esc(l.id)+' · '+esc(l.title)+'<small>'+esc(l.when||'')+'</small></h2>';
+  h+='<div class="links" style="margin-bottom:8px">'+(l.links||[]).map(linkEl).join('')+'</div>';
+  var hasM=(l.tasks||[]).some(function(t){return t.m||(t.parts||[]).some(function(p){return p.m})});
+  if(!(l.tasks||[]).length){
+    if(l.status==='oficialni') return h+'<div class="empty">Vyučující zveřejnil vlastní řešení. Otevři odkazy výše.</div>'+(l.note?'<p class="muted" style="font-size:13px">'+inl(l.note)+'</p>':'');
+    return h+'<div class="empty">Řešení tohoto leafletu se připravují.</div>';
+  }
+  h+='<div class="toolbar">'+(hasM?'<button class="fb" data-basic aria-pressed="'+st.onlyBasic+'">Jen základní (!)</button>':'')+'<button class="fb" data-allsol="1">Zobrazit všechna řešení</button><button class="fb" data-allsol="0">Skrýt všechna řešení</button></div>';
+  h+='<p class="muted" style="font-size:13.5px;margin:0 2px 12px">'+(hasM?'(!) = základní příklad, který může vyučující vyvolat k tabuli · © = zábavný. ':'')+'Řešení jsou schválně skrytá: nejdřív to zkus sám, pak porovnej.</p>';
+  h+=tasks.map(function(t){return taskEl(l,t)}).join('');
+  if(l.note) h+='<p class="muted" style="font-size:13px;margin:4px 2px">'+inl(l.note)+'</p>';
+  return h;
+}
+function mk(m){return m==='!'?'<span class="mk b">(!) základní</span>':(m==='©'?'<span class="mk f">© zábavný</span>':'')}
+function taskEl(l,t){
+  var id=l.id+':'+t.n, open=!!st.openSol[id], hasCh=!!(D.charts&&D.charts[id]);
+  var parts=(t.parts||[]).map(function(p){return '<li><b class="pl">('+esc(p.l)+')</b>'+(p.m?mk(p.m):'')+inl(p.t)+'</li>'}).join('');
+  var sol='';
+  if(open){
+    sol=rt(t.sol||'')+((t.parts||[]).some(function(p){return p.sol})?'<ul>'+t.parts.filter(function(p){return p.sol}).map(function(p){return '<li><b>('+esc(p.l)+')</b> '+String(p.sol).split('\n').map(function(x){var h=inl(x);return /^GRAF:/.test(x)?'<em class="graph">'+h+'</em>':h}).join('<br>')+'</li>'}).join('')+'</ul>':'');
+    if(hasCh){
+      /* popis grafu slovy zůstává, ale schovaný pod skutečným grafem */
+      sol=sol.replace(/<p class="graph">([\s\S]*?)<\/p>/g,'<details class="alt"><summary>Popis grafu slovy</summary><p class="graph">$1</p></details>').replace(/<em class="graph">([\s\S]*?)<\/em>/g,'<details class="alt"><summary>Popis grafu slovy</summary><em class="graph">$1</em></details>');
+      sol+='<div class="charts" data-charts="'+esc(id)+'"></div>';
+    }
+    sol='<div class="sol">'+sol+
+      '<div class="ver">'+(t.v?'<span class="chip '+VER[t.v][0]+'">'+VER[t.v][1]+'</span>':'')+(t.key?'<span class="chip">klíč: '+esc(t.key)+'</span>':'')+'</div>'+
+      '<label class="rev"><input class="chk" type="checkbox" data-seen="'+esc(id)+'"'+(seen[id]?' checked':'')+'> Rozumím postupu</label></div>';
+  }
+  return '<div class="task"><div class="task-h"><span class="task-n">'+esc(t.n)+'</span><div class="task-t">'+(t.m?mk(t.m):'')+(t.t?inl(t.t):'')+(parts?'<ul>'+parts+'</ul>':'')+'</div></div>'+
+    '<button class="sol-btn" data-sol="'+esc(id)+'" aria-expanded="'+open+'">'+(open?'Skrýt řešení':'Ukázat řešení')+'</button>'+sol+'</div>';
+}
+
+/* ---------- global deadlines ---------- */
+function viewDeadlines(){
+  var list=allDeadlines();
+  if(st.kind!=='all') list=list.filter(function(x){return x.kind===st.kind});
+  if(!st.showClasses) list=list.filter(function(x){return x.kind!=='vyuka'});
+  if(st.fcourse!=='all') list=list.filter(function(x){return x.cid===st.fcourse});
+  if(!st.showPast) list=list.filter(function(x){return daysTo(x.d,x.tm)>=0});
+  var h='<h1 class="lt">Termíny</h1><p class="lt-sub">'+list.length+' položek · odškrtni si, co máš hotové</p>';
+  h+='<div class="filters"><button class="fb" data-fc="all" aria-pressed="'+(st.fcourse==='all')+'">Všechny předměty</button>'+D.courses.map(function(c){return '<button class="fb cc" style="--h:'+c.hue+'" data-fc="'+c.id+'" aria-pressed="'+(st.fcourse===c.id)+'">'+esc(c.short)+'</button>'}).join('')+'</div>';
+  h+='<div class="filters"><button class="fb" data-kind="all" aria-pressed="'+(st.kind==='all')+'">Vše</button>'+['odevzdani','test','kvis','registrace','zkouska','obhajoba'].map(function(k){return '<button class="fb" data-kind="'+k+'" aria-pressed="'+(st.kind===k)+'">'+KIND[k]+'</button>'}).join('')+
+     '<button class="fb" data-toggle="showClasses" aria-pressed="'+st.showClasses+'">+ výuka</button><button class="fb" data-toggle="showPast" aria-pressed="'+st.showPast+'">+ proběhlé</button></div>';
+  if(!list.length) return h+'<div class="empty">Nic tu není.</div>';
+  var cur='';
+  list.forEach(function(x){
+    var d=dt(x.d,'12:00'), m=MONTHS[d.getMonth()]+' '+d.getFullYear();
+    if(m!==cur){ if(cur) h+='</div>'; cur=m; h+='<h2 class="sh" style="font-size:17px;text-transform:capitalize;margin-top:20px">'+m+'</h2><div class="dl">'; }
+    h+=dlItem(x,true);
+  });
+  return h+'</div>';
+}
+
+/* ---------- week ---------- */
+function viewWeek(){
+  var H0=8,H1=18,PX=56;
+  var today=NOW.getDay(); // 1..5
+  var days=['Po','Út','St','Čt','Pá'];
+  var h='<h1 class="lt">Týden</h1><p class="lt-sub">'+esc(D.semester)+' · pravidelná výuka z IS (bloková výuka SYRP a konzultace tu nejsou)</p>';
+  h+='<div class="scroll-x" style="margin:0 -16px;padding:0 16px 4px"><div class="wk"><div class="hd"></div>'+days.map(function(d,i){return '<div class="hd'+(today===i+1?' today':'')+'">'+d+'</div>'}).join('');
+  var hr='<div class="hr" style="height:'+((H1-H0)*PX)+'px">';
+  for(var k=H0;k<H1;k++) hr+='<span style="top:'+((k-H0)*PX)+'px">'+k+':00</span>';
+  hr+='</div>';
+  h+=hr;
+  for(var di=1;di<=5;di++){
+    h+='<div class="dc" style="height:'+((H1-H0)*PX)+'px">';
+    D.timetable.filter(function(b){return b.day===di}).forEach(function(b){
+      var c=course(b.cid), f=b.from.split(':'), t=b.to.split(':');
+      var top=((+f[0])+(+f[1])/60-H0)*PX, ht=((+t[0])+(+t[1])/60-(+f[0])-(+f[1])/60)*PX-2;
+      h+='<button class="blk'+(b.conflict?' conflict':'')+'" data-course="'+c.id+'" style="--h:'+c.hue+';top:'+top+'px;height:'+ht+'px'+(b.col?';left:'+b.col[0]+'%;right:'+b.col[1]+'%':'')+'"><b>'+esc(c.short)+'</b>'+esc(b.kind)+' · '+esc(b.room)+'<br>'+b.from+'–'+b.to+(b.note?'<br>'+esc(b.note):'')+'</button>';
+    });
+    h+='</div>';
+  }
+  h+='</div></div>';
+  h+='<p class="muted" style="font-size:13px;margin:12px 2px 0">Čárkovaně orámované bloky se v čase překrývají (pondělí 14:00).</p>';
+  return h;
+}
+
+/* ---------- render + events ---------- */
+function mountCharts(){
+  if(!window.SkolaChart) return;
+  Array.prototype.forEach.call($app.querySelectorAll('[data-charts]'),function(el){
+    ((D.charts||{})[el.getAttribute('data-charts')]||[]).forEach(function(sp){ window.SkolaChart.mount(el,sp); });
+  });
+}
+function render(){
+  viewNav();
+  $app.innerHTML = st.view==='course'?viewCourse():st.view==='deadlines'?viewDeadlines():st.view==='week'?viewWeek():viewHome();
+  mountCharts();
+}
+function go(v,opts){
+  st.view=v; if(opts){for(var k in opts) st[k]=opts[k];}
+  render(); window.scrollTo(0,0);
+  try{ history.replaceState(null,'',v==='course'?'#'+st.course:'#'+v) }catch(e){}
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-go],[data-course],[data-tab],[data-leaflet],[data-sol],[data-allsol],[data-basic],[data-fc],[data-kind],[data-toggle]');
+  if(!t) return;
+  if(t.hasAttribute('data-go')){ if(t.dataset.go==='home') st.course=null; go(t.dataset.go,{leaflet:null}); return; }
+  if(t.hasAttribute('data-course')){ var tab=t.dataset.tab||'prehled'; go('course',{course:t.dataset.course,tab:tab,leaflet:null}); return; }
+  if(t.hasAttribute('data-tab')){ st.tab=t.dataset.tab; st.leaflet=null; render(); return; }
+  if(t.hasAttribute('data-leaflet')){ st.leaflet=t.dataset.leaflet||null; render(); window.scrollTo(0,0); return; }
+  if(t.hasAttribute('data-sol')){ var id=t.dataset.sol; st.openSol[id]=!st.openSol[id]; render(); return; }
+  if(t.hasAttribute('data-allsol')){ var L=(D.leaflets[st.course]||[]).filter(function(x){return x.id===st.leaflet})[0]; if(L){ var on=t.dataset.allsol==='1'; (L.tasks||[]).forEach(function(k){st.openSol[L.id+':'+k.n]=on}); } render(); return; }
+  if(t.hasAttribute('data-basic')){ st.onlyBasic=!st.onlyBasic; render(); return; }
+  if(t.hasAttribute('data-fc')){ st.fcourse=t.dataset.fc; render(); return; }
+  if(t.hasAttribute('data-kind')){ st.kind=t.dataset.kind; render(); return; }
+  if(t.hasAttribute('data-toggle')){ st[t.dataset.toggle]=!st[t.dataset.toggle]; render(); return; }
+});
+document.addEventListener('change',function(e){
+  var t=e.target;
+  if(t.dataset&&t.dataset.done){ done[t.dataset.done]=t.checked; if(!t.checked) delete done[t.dataset.done]; store.set('done',done); render(); }
+  if(t.dataset&&t.dataset.seen){ seen[t.dataset.seen]=t.checked; if(!t.checked) delete seen[t.dataset.seen]; store.set('seen',seen); }
+});
+document.getElementById('brand').addEventListener('click',function(){st.course=null;go('home',{leaflet:null})});
+document.getElementById('thm').addEventListener('click',function(){
+  theme=theme==='auto'?'light':(theme==='light'?'dark':'auto'); store.set('theme',theme); applyTheme();
+});
+
+function fromHash(){
+  var h=(location.hash||'').replace('#','');
+  if(!h){ st.view='home'; st.course=null; st.leaflet=null; return; }
+  if(course(h)){ st.view='course'; st.course=h; st.tab='prehled'; st.leaflet=null; }
+  else if(['deadlines','week'].indexOf(h)>=0){ st.view=h; }
+}
+window.addEventListener('hashchange',function(){ fromHash(); render(); window.scrollTo(0,0); });
+applyTheme();
+fromHash();
+render();
+/* offline režim (jen když je appka nasazená jako web s manifestem) */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && document.querySelector('link[rel="manifest"]')){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+})();
+</script>
+
+</html>
