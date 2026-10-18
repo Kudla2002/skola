@@ -1,5 +1,5 @@
 /* Škola · service worker: appka běží offline + push notifikace na termíny (notify.js). Cache se mění s každým buildem. */
-const CACHE = 'skola-2026-10-18b';
+const CACHE = 'skola-2026-10-18c';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'notify.js', 'pushcrypto.js', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

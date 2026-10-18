@@ -66,22 +66,22 @@
     });
     return out.filter(function (x) { return x.d && /^\d{4}-\d{2}-\d{2}$/.test(x.d); });
   }
-  function plan(now) {
-    var C = cfg(), out = [], lim = now + HORIZON, all = items();
-    function add(t, pl) { if (t > now + 30000 && t < lim) out.push({ at: t, pl: pl }); }
+  function plan(now, over) {
+    var C = Object.assign(cfg(), over || {}), out = [], lim = now + HORIZON, all = items();
+    function add(t, pl, ty) { if (t > now + 30000 && t < lim) out.push({ at: t, pl: pl, ty: ty }); }
     all.forEach(function (x) {
       if (x.kind === 'vyuka' || x.done) return;
       var due = new Date(x.d + 'T' + (x.tm || '23:59') + ':00').getTime(); if (due < now) return;
       var tm = x.tm && x.tm !== '23:59' ? x.tm : null;   // 23:59 = „do konce dne“, ne konkrétní čas
       var who = (x.c.short || x.c.code || '') + ' · ' + (KIND[x.kind] || 'Termín'), when = fmtD(x.d) + (tm ? ' v ' + tm : ' do 23:59');
       var base = { u: './#deadlines', tag: 'dl-' + hash(x.key) };
-      if (C.d7 && BIG[x.kind]) add(at(addDays(x.d, -7), C.d1 || '18:00'), { t: 'Za týden: ' + x.t, b: who + ' · ' + when + ' – je čas začít se učit', u: base.u, tag: base.tag });
-      if (C.d3) add(at(addDays(x.d, -3), C.d1 || '18:00'), { t: 'Za 3 dny: ' + x.t, b: who + ' · ' + when, u: base.u, tag: base.tag });
-      if (C.d1) add(at(addDays(x.d, -1), C.d1), { t: 'Zítra: ' + x.t, b: who + ' · ' + when, u: base.u, tag: base.tag });
+      if (C.d7 && BIG[x.kind]) add(at(addDays(x.d, -7), C.d1 || '18:00'), { t: 'Za týden: ' + x.t, b: who + ' · ' + when + ' – je čas začít se učit', u: base.u, tag: base.tag }, 'd7');
+      if (C.d3) add(at(addDays(x.d, -3), C.d1 || '18:00'), { t: 'Za 3 dny: ' + x.t, b: who + ' · ' + when, u: base.u, tag: base.tag }, 'd3');
+      if (C.d1) add(at(addDays(x.d, -1), C.d1), { t: 'Zítra: ' + x.t, b: who + ' · ' + when, u: base.u, tag: base.tag }, 'd1');
       var mAt = C.morn && (!tm || tm >= '11:00') ? at(x.d, C.morn) : 0;
-      if (mAt) add(mAt, { t: (tm ? 'Dnes v ' + tm + ': ' : 'Dnes do půlnoci: ') + x.t, b: who, u: base.u, tag: base.tag });
+      if (mAt) add(mAt, { t: (tm ? 'Dnes v ' + tm + ': ' : 'Dnes do půlnoci: ') + x.t, b: who, u: base.u, tag: base.tag }, 'morn');
       /* pár hodin předem – jen když to nespadne skoro na ranní připomínku */
-      if (+C.hBefore && x.tm && !(mAt && due - C.hBefore * 3600e3 - mAt < 90 * 60000)) add(due - C.hBefore * 3600e3, { t: 'Za ' + (C.hBefore === 1 ? 'hodinu' : C.hBefore + ' h') + ': ' + x.t, b: who + ' · ' + x.tm, u: base.u, tag: base.tag });
+      if (+C.hBefore && x.tm && !(mAt && due - C.hBefore * 3600e3 - mAt < 90 * 60000)) add(due - C.hBefore * 3600e3, { t: 'Za ' + (C.hBefore === 1 ? 'hodinu' : C.hBefore + ' h') + ': ' + x.t, b: who + ' · ' + x.tm, u: base.u, tag: base.tag }, 'hb');
     });
     /* neděle večer: přehled termínů na příští týden (jen když nějaké jsou) */
     if (C.week) {
@@ -90,13 +90,13 @@
         var from = addDays(day, 1), to = addDays(day, 7);
         var wk = all.filter(function (x) { return x.kind !== 'vyuka' && !x.done && x.d >= from && x.d <= to; }).sort(function (a, b) { return (a.d + (a.tm || '')).localeCompare(b.d + (b.tm || '')); });
         if (!wk.length) continue;
-        add(at(day, C.week), { t: 'Příští týden ' + n(wk.length, 'termín', 'termíny', 'termínů'), b: wk.slice(0, 3).map(function (x) { return DAYS[new Date(x.d + 'T12:00:00').getDay()] + ' ' + (x.c.short || '') + ': ' + x.t; }).join(' · ') + (wk.length > 3 ? ' …' : ''), u: './#week', tag: 'week-' + day });
+        add(at(day, C.week), { t: 'Příští týden ' + n(wk.length, 'termín', 'termíny', 'termínů'), b: wk.slice(0, 3).map(function (x) { return DAYS[new Date(x.d + 'T12:00:00').getDay()] + ' ' + (x.c.short || '') + ': ' + x.t; }).join(' · ') + (wk.length > 3 ? ' …' : ''), u: './#week', tag: 'week-' + day }, 'week');
       }
     }
     /* volitelně: seminář / blok výuky X min předem */
     if (+C.lesson) all.forEach(function (x) {
       if (x.kind !== 'vyuka' || !x.tm) return;
-      add(new Date(x.d + 'T' + x.tm + ':00').getTime() - C.lesson * 60000, { t: 'Za ' + C.lesson + ' min: ' + (x.c.short || x.c.name), b: x.t + ' · ' + x.tm, u: './#week', tag: 'les-' + hash(x.key) });
+      add(new Date(x.d + 'T' + x.tm + ':00').getTime() - C.lesson * 60000, { t: 'Za ' + C.lesson + ' min: ' + (x.c.short || x.c.name), b: x.t + ' · ' + x.tm, u: './#week', tag: 'les-' + hash(x.key) }, 'les');
     });
     return out.sort(function (a, b) { return a.at - b.at; }).slice(0, MAX);
   }
@@ -168,6 +168,20 @@
     }).catch(function (e) { toast('Nepovedlo se (' + ((e && (e.code || e.message)) || 'chyba') + ')'); });
   }
 
+  /* ukázka všech typů hned, z tvých skutečných termínů (plán se tím nemění) */
+  var TYPES = [['d7', 'týden předem'], ['d3', '3 dny předem'], ['d1', 'den předem'], ['morn', 'ráno v den termínu'], ['hb', 'pár hodin předem'], ['week', 'nedělní přehled'], ['les', 'seminář']];
+  function testAll() {
+    return dev().then(function (d) {
+      if (!d) { toast('Nejdřív zapni notifikace na tomto zařízení.'); return; }
+      var P = plan(Date.now(), { d7: true, d3: true, d1: '18:00', morn: '07:30', hBefore: 2, week: '19:00', lesson: 15 }), pick = [], miss = [];
+      TYPES.forEach(function (t) { var f = P.filter(function (p) { return p.ty === t[0]; })[0]; if (f) pick.push(Object.assign({}, f.pl, { tag: 't-' + t[0] + '-' + Date.now() })); else miss.push(t[1]); });
+      if (!pick.length) { toast('V příštích 6 týdnech nemáš žádný termín, není z čeho udělat ukázku.'); return; }
+      return lib().then(function () { return Promise.all(pick.map(function (m) { return PushCrypto.encrypt(d.keys, m).then(function (b) { return { body: PushCrypto.b64u(b) }; }); })); })
+        .then(function (its) { return api('/dev/send', { id: d.id, k: d.k, items: its }); })
+        .then(function (r) { toast(r.sent ? 'Odesláno ' + r.sent + ' ukázek' + (miss.length ? ' · bez dat: ' + miss.join(', ') : '') : 'Nepodařilo se doručit (denní limit ukázek je 40)'); });
+    }).catch(function (e) { toast('Nepovedlo se (' + ((e && (e.code || e.message)) || 'chyba') + ')'); });
+  }
+
   /* ---------- nastavení (spodní panel) ---------- */
   (function css() {
     var s = document.createElement('style');
@@ -220,7 +234,7 @@
         nx.appendChild(b); nx.appendChild(document.createTextNode(' · celkem ' + n(P.length, 'upozornění', 'upozornění', 'upozornění') + ' na 6 týdnů. Hotové termíny (odškrtnuté) se nepřipomínají.'));
       }
       paintNext();
-      if (on) { btn('Poslat zkušební', 'sec', test); btn('Vypnout na tomto zařízení', 'dng', function () { close(); disable().then(function () { toast('Na tomto zařízení vypnuto'); }); }); }
+      if (on) { btn('Vyzkoušet všechny typy', '', function () { close(); testAll(); }); btn('Poslat zkušební', 'sec', test); btn('Vypnout na tomto zařízení', 'dng', function () { close(); disable().then(function () { toast('Na tomto zařízení vypnuto'); }); }); }
       else if (can() && Notification.permission !== 'denied') btn('Zapnout na tomto zařízení', '', function () { close(); enable(); });
       sh.appendChild(el('div', 'gmeta', 'Text upozornění se šifruje přímo v tomto zařízení – prostředník vidí jen čas odeslání. Plán se obnoví při každém otevření appky a odškrtnutí termínu, dopředu je naplánovaný na 6 týdnů.'));
       btn('Zavřít', 'sec', close);
@@ -242,7 +256,7 @@
     dev().then(function (d) { b.classList.toggle('on', !!d); b.setAttribute('aria-label', 'Notifikace: ' + (d ? 'zapnuté' : 'vypnuté')); b.title = b.getAttribute('aria-label'); });
   }
 
-  window.SkolaPush = { sync: sync, open: openCfg, off: disable, plan: plan };
+  window.SkolaPush = { sync: sync, open: openCfg, off: disable, plan: plan, testAll: testAll };
   function init() {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint, { once: true }); else paint();
     if (lg('push.want', 0) && A().token && A().token()) { ls('push.want', null); toast('Přihlášeno. Dokonči zapnutí notifikací.', 'Zapnout', enable); }
