@@ -145,7 +145,11 @@
         .then(function (s) { return api('/dev/subscribe', { app: APP, sub: s.toJSON(), ua: ua() }, tok).then(function (r) { ls('push.dev', { id: r.id, ep: s.endpoint }); }); })
         .then(function () { ls('push.sync', null); return sync(true); })
         .then(function (r) { toast('Notifikace zapnuté' + (r ? ' · naplánováno ' + n(r.n, 'upozornění', 'upozornění', 'upozornění') : '')); });
-    }).catch(function (e) { toast('Zapnutí se nepovedlo (' + ((e && (e.code || e.message)) || 'chyba') + ')'); }).then(paint);
+    }).catch(function (e) {
+      /* „Load failed“ / „Failed to fetch“ = spojení s prostředníkem se nepovedlo (offline, nebo prostředník ještě nezná web Školy) */
+      var net = e && e.name === 'TypeError' && !e.code;
+      toast(net ? 'Nepodařilo se spojit s prostředníkem notifikací – zkus to za chvíli znovu.' : 'Zapnutí se nepovedlo (' + ((e && (e.code || e.message)) || 'chyba') + ')');
+    }).then(paint);
   }
   function disable() {
     return dev().then(function (d) {
