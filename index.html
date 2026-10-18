@@ -14,6 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="notify.js?v=1" defer></script>
 <style>html:not(.unlocked) header.bar,html:not(.unlocked) #app,html:not(.unlocked) #tabbar{display:none!important}</style>
 <title>Škola ESF</title>
 <style>
@@ -679,6 +680,8 @@ details.alt .graph{margin:4px 0 0}
     return idbDel('data').then(function () { location.replace(redirectUri()); });
   }
   function logout() { wipeAndReload(); }
+  /* pro notifikace (notify.js): přihlášení a hlášky */
+  window.SkolaAuth = { token: token, login: login, toast: toast };
 
   /* ---------- účet (v hlavní appce) ---------- */
   function addAccountButton() {
@@ -709,7 +712,9 @@ details.alt .graph{margin:4px 0 0}
       var armed = false;
       var out = btn('Odhlásit a smazat data z tohoto zařízení', 'dng', function () {
         if (!armed) { armed = true; out.textContent = 'Opravdu smazat? Klepni znovu'; return; }
-        wipeAndReload();
+        /* nejdřív vypnout notifikace na tomto zařízení, ať nechodí upozornění na smazaná data */
+        var off = window.SkolaPush ? Promise.race([window.SkolaPush.off(), new Promise(function (r) { setTimeout(r, 2500); })]) : Promise.resolve();
+        off.then(wipeAndReload, wipeAndReload);
       });
       btn('Zavřít', 'sec', close);
       bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
@@ -728,6 +733,7 @@ details.alt .graph{margin:4px 0 0}
     var src = document.getElementById('skola-main');
     var s = document.createElement('script'); s.text = src.textContent; document.body.appendChild(s);
     addAccountButton();
+    try { document.dispatchEvent(new Event('skola:boot')); } catch (e) {}
   }
 
   function start() {
@@ -1467,7 +1473,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('change',function(e){
   var t=e.target;
-  if(t.dataset&&t.dataset.done){ done[t.dataset.done]=t.checked; if(!t.checked) delete done[t.dataset.done]; store.set('done',done); render(); }
+  if(t.dataset&&t.dataset.done){ done[t.dataset.done]=t.checked; if(!t.checked) delete done[t.dataset.done]; store.set('done',done); render(); if(window.SkolaPush) window.SkolaPush.sync(); }
   if(t.dataset&&t.dataset.seen){ seen[t.dataset.seen]=t.checked; if(!t.checked) delete seen[t.dataset.seen]; store.set('seen',seen); }
 });
 document.getElementById('brand').addEventListener('click',function(){st.course=null;go('home',{leaflet:null})});
