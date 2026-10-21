@@ -8,3 +8,15 @@ soubor „Škola ESF – data.json“ z Google Disku přihlášeného uživatele
 jen soubor, který sama vytvořila), uloží ho do zařízení a funguje i offline. Bez přihlášení se nezobrazí nic.
 
 Odhlášení v appce (ikona účtu) smaže data ze zařízení a zruší přístup.
+
+## Sdílení předmětů
+
+U každého předmětu je tlačítko **Kopírovat odkaz**. Odkaz nese celý předmět (termíny, podmínky, materiály, leaflety
+i rozvrh) kromě **mých bodů a docházky z poznámkových bloků**; data jsou v části za `#`, která se nikdy neposílá na server.
+Kdo odkaz otevře, předmět se mu uloží jen do jeho zařízení a přidá se do appky, přihlášení nepotřebuje. Další odkaz
+přidá další předmět; stejný předmět poslaný znovu se aktualizuje. U dlouhých odkazů (Telegram, Instagram…) jde předmět
+poslat jako soubor (`Přidat předmět ze souboru` v účtu).
+
+Obsah odkazu je cizí vstup, proto se při příjmu přestaví čistá kopie (`cleanBundle` v `index.html`): povolené tvary
+polí, bezpečná id, ikony jen jako jednoduché SVG tvary.
+

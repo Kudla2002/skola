@@ -563,6 +563,7 @@ details.alt .graph{margin:4px 0 0}
       '.gsheet .gmeta{margin:0 0 16px;text-align:left}' +
       '.gtoast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom));z-index:80;display:flex;gap:12px;align-items:center;max-width:min(92vw,420px);padding:10px 14px;border-radius:14px;background:var(--label);color:var(--bg);font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.25)}' +
       '.gtoast button{border:0;background:none;color:inherit;font-weight:700;text-decoration:underline;padding:0}' +
+      '.gta{display:block;width:100%;margin:0 0 12px;border:0;border-radius:12px;background:var(--fill2);color:var(--label);font:12px/1.35 var(--fm);padding:10px;resize:none}' +
       '.thm.acc{margin-left:8px!important}' +
       '@media (prefers-reduced-motion:reduce){.gspin{animation:none}}';
     document.head.appendChild(s);
@@ -583,10 +584,12 @@ details.alt .graph{margin:4px 0 0}
     c.appendChild(node('h1', null, o.title));
     if (o.text) c.appendChild(node('p', null, o.text));
     if (o.msg) { var m = node('div', 'gmsg', o.msg); m.setAttribute('role', 'alert'); c.appendChild(m); }
-    if (o.file) c.appendChild(fileBtn(o.file.label, 'gbtn', o.file.fn));
+    var fe = o.file ? fileBtn(o.file.label, 'gbtn' + (o.file.cls ? ' ' + o.file.cls : ''), o.file.fn) : null;
+    if (fe && !o.file.cls) c.appendChild(fe);
     (o.buttons || []).forEach(function (bt) {
       var el = node('button', 'gbtn' + (bt.cls ? ' ' + bt.cls : ''), bt.label); el.type = 'button'; el.addEventListener('click', bt.fn); c.appendChild(el);
     });
+    if (fe && o.file.cls) c.appendChild(fe);
     if (o.meta) c.appendChild(node('div', 'gmeta', o.meta));
     g.appendChild(c);
   }
@@ -596,12 +599,12 @@ details.alt .graph{margin:4px 0 0}
     i.addEventListener('change', function () { var f = i.files && i.files[0]; i.value = ''; if (f) fn(f); });
     l.appendChild(i); return l;
   }
-  function toast(text, actionLabel, fn) {
+  function toast(text, actionLabel, fn, ms) {
     var old = document.querySelector('.gtoast'); if (old) old.remove();
     var t = node('div', 'gtoast'); t.setAttribute('role', 'status'); t.appendChild(node('span', null, text));
     if (actionLabel) { var b = node('button', null, actionLabel); b.type = 'button'; b.addEventListener('click', fn); t.appendChild(b); }
     document.body.appendChild(t);
-    if (!actionLabel) setTimeout(function () { t.remove(); }, 5000);
+    if (!actionLabel || ms) setTimeout(function () { t.remove(); }, ms || 5000);
   }
 
   /* ---------- obrazovky ---------- */
@@ -609,8 +612,9 @@ details.alt .graph{margin:4px 0 0}
     var ok = configured();
     screen({
       title: 'Škola',
-      text: 'Předměty, termíny a vyřešené leaflety. Data jsou uložená na tvém Google Disku, tahle stránka je neobsahuje.',
+      text: 'Předměty, termíny a vyřešené leaflety. Data jsou uložená na tvém Google Disku, tahle stránka je neobsahuje. Máš od spolužáka odkaz na předmět? Otevři ho přímo, přihlášení nepotřebuješ.',
       msg: msg || (ok ? '' : 'Přihlášení ještě není nastavené (chybí Google Client ID).'),
+      file: { label: 'Přidat předmět ze souboru', cls: 'sec', fn: function (f) { importSharedFile(f); } },
       buttons: ok ? [{ label: 'Přihlásit se přes Google', fn: login }] : []
     });
   }
@@ -625,7 +629,7 @@ details.alt .graph{margin:4px 0 0}
       text: 'Na tvém Google Disku zatím nejsou data aplikace. Vyber soubor skola-data.json. Nahraje se na tvůj Disk a další zařízení si ho po přihlášení stáhnou samo.',
       msg: msg,
       file: { label: 'Vybrat skola-data.json', fn: function (f) { importFile(f, existingId, email, true); } },
-      buttons: [{ label: 'Odhlásit', cls: 'sec', fn: logout }],
+      buttons: (SH.length ? [{ label: 'Pokračovat jen se sdílenými předměty', cls: 'sec', fn: function () { boot(null); } }] : []).concat([{ label: 'Odhlásit', cls: 'sec', fn: logout }]),
       meta: 'Přihlášen jako ' + email
     });
   }
@@ -679,11 +683,320 @@ details.alt .graph{margin:4px 0 0}
     var t = lget('tok');
     if (t && t.at) { try { fetch('https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(t.at), { method: 'POST', mode: 'no-cors' }).catch(function () {}); } catch (e) {} }
     ['tok', 'owner', 'state', 'ret'].forEach(ldel);
-    return idbDel('data').then(function () { location.replace(redirectUri()); });
+    return idbDel('data').then(function () { return idbDel('shared'); }).then(function () { location.replace(redirectUri()); });
   }
   function logout() { wipeAndReload(); }
   /* pro notifikace (notify.js): přihlášení a hlášky */
   window.SkolaAuth = { token: token, login: login, toast: toast };
+
+  /* ---------- sdílení předmětů ----------
+     Odkaz nese celý předmět (bez mých bodů a docházky z poznámkových bloků) v části za #, která se nikdy neposílá
+     na server. Příjemce si předmět uloží jen do svého zařízení (IndexedDB, klíč „shared“) a appka ho přidá k jeho
+     vlastním. Obsah odkazu i souboru je cizí vstup: před uložením se z něj přestaví čistá kopie (cleanBundle),
+     protože hlavní skript skládá část údajů do HTML bez escapování (id, barva, ikona, popisek leafletů…). */
+  var SH = [];                  // sdílené předměty v tomto zařízení: [{id, ts, added, b}]
+  var OWN = {};                 // id vlastních předmětů z Disku (ty sdílený předmět nepřepíše)
+  var ID_RE = /^[A-Za-z0-9_.-]{1,40}$/, DATE_RE = /^\d{4}-\d{2}-\d{2}$/, TM_RE = /^\d{1,2}:\d{2}$/;
+  var VERS = { key: 1, calc: 1, theory: 1, unver: 1, keyx: 1 };
+  var MAXRAW = 8 * 1024 * 1024, LINK_WARN = 12000;
+
+  function loadShared() {
+    return idbGet('shared').then(function (v) {
+      SH = Array.isArray(v) ? v.filter(function (x) { return x && x.b && x.b.course && ID_RE.test(x.id); }) : [];
+      return SH;
+    });
+  }
+  function saveShared() { return idbSet('shared', SH); }
+
+  function b64u(bytes) {
+    var s = ''; for (var i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function unb64u(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '=';
+    var bin = atob(s), a = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a;
+  }
+  /* přes (De)CompressionStream; výstup je omezený (ochrana proti „zip bombě“ v odkazu) */
+  function pipe(bytes, stream) {
+    var w = stream.writable.getWriter();
+    w.write(bytes).catch(function () {}); w.close().catch(function () {});
+    var rd = stream.readable.getReader(), chunks = [], total = 0;
+    return (function pump() {
+      return rd.read().then(function (r) {
+        if (r.done) { var out = new Uint8Array(total), o = 0; chunks.forEach(function (c) { out.set(c, o); o += c.length; }); return out; }
+        total += r.value.length;
+        if (total > MAXRAW) { rd.cancel().catch(function () {}); throw mkerr('Odkaz je příliš velký.', 0); }
+        chunks.push(r.value); return pump();
+      });
+    })();
+  }
+  function encode(obj) {
+    var bytes = new TextEncoder().encode(JSON.stringify(obj));
+    if (typeof CompressionStream === 'undefined') return Promise.resolve('0.' + b64u(bytes));
+    return pipe(bytes, new CompressionStream('deflate-raw')).then(function (z) { return '1.' + b64u(z); });
+  }
+  function decode(str) {
+    var bad = function () { return mkerr('Odkaz je poškozený nebo useknutý. Požádej o nový.', 0); };
+    var m = /^([01])\.([A-Za-z0-9_-]+)$/.exec(str); if (!m) return Promise.reject(bad());
+    var bytes; try { bytes = unb64u(m[2]); } catch (e) { return Promise.reject(bad()); }
+    if (bytes.length > MAXRAW) return Promise.reject(mkerr('Odkaz je příliš velký.', 0));
+    var p;
+    if (m[1] === '0') p = Promise.resolve(bytes);
+    else if (typeof DecompressionStream === 'undefined') return Promise.reject(mkerr('Tenhle prohlížeč odkaz neumí otevřít. Aktualizuj ho.', 0));
+    else p = pipe(bytes, new DecompressionStream('deflate-raw'));
+    return p.then(function (raw) { return JSON.parse(new TextDecoder().decode(raw)); })
+      .catch(function (e) { throw (e && e.code === 0) ? e : bad(); });
+  }
+
+  /* ---- odeslání: z mých dat vyrobit balíček jednoho předmětu ---- */
+  function exportBundle(id) {
+    var D = window.DATA, c = D && (D.courses || []).filter(function (x) { return x.id === id; })[0];
+    if (!c) return null;
+    var course = {};
+    Object.keys(c).forEach(function (k) { if (k !== 'myPoints' && k !== 'myNote') course[k] = c[k]; });   // moje body a docházka zůstávají jen u mě
+    var L = D.leaflets && D.leaflets[id], charts = {};
+    (L || []).forEach(function (l) { (l.tasks || []).forEach(function (t) { var k = l.id + ':' + t.n; if (D.charts && D.charts[k]) charts[k] = D.charts[k]; }); });
+    return {
+      v: 1, ts: (D.shared && D.shared[id]) || Date.now(), isBase: D.isBase, semester: D.semester, updated: D.updated,
+      course: course, leaflets: L || null, charts: charts,
+      timetable: (D.timetable || []).filter(function (b) { return b.cid === id; }).map(function (b) {
+        var o = {}; Object.keys(b).forEach(function (k) { if (k !== 'conflict' && k !== 'col') o[k] = b[k]; }); return o;
+      }),
+      icon: c.icon && D.icons && D.icons[c.icon] ? { id: c.icon, svg: D.icons[c.icon] } : null
+    };
+  }
+
+  /* ---- příjem: z cizího vstupu přestavět čistou kopii ---- */
+  function deep(v, d) {
+    if (v === null || typeof v === 'boolean') return v;
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    if (typeof v === 'string') return v.length > 100000 ? v.slice(0, 100000) : v;
+    if (d > 14) return null;
+    if (Array.isArray(v)) return v.slice(0, 3000).map(function (x) { return deep(x, d + 1); });
+    if (typeof v === 'object') {
+      var o = {};
+      Object.keys(v).slice(0, 300).forEach(function (k) { if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') o[k] = deep(v[k], d + 1); });
+      return o;
+    }
+    return null;
+  }
+  function arr(v) { return Array.isArray(v) ? v : []; }
+  function objs(v) { return arr(v).filter(function (x) { return x && typeof x === 'object' && !Array.isArray(x); }); }
+  function str(v, n) { return typeof v === 'string' ? v.slice(0, n) : ''; }
+  function num(v, lo, hi) { v = +v; if (!isFinite(v)) v = 0; return Math.min(hi, Math.max(lo, v)); }
+
+  /* ikona = vnitřek <svg>; propustí se jen kresba (path, circle…) a jen bezpečné atributy */
+  var SVG_TAGS = { path: 1, circle: 1, rect: 1, line: 1, polyline: 1, polygon: 1, ellipse: 1, g: 1 };
+  var SVG_ATTR = /^(d|cx|cy|r|rx|ry|x|y|x1|y1|x2|y2|width|height|points|transform|opacity|fill-rule|clip-rule|stroke-width|stroke-linecap|stroke-linejoin|fill|stroke)$/;
+  function cleanSvg(src) {
+    if (typeof src !== 'string' || src.length > 4000) return '';
+    var doc; try { doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + src + '</svg>', 'image/svg+xml'); } catch (e) { return ''; }
+    if (!doc.documentElement || doc.getElementsByTagName('parsererror').length) return '';
+    function walk(n, depth) {
+      var out = '';
+      Array.prototype.forEach.call(n.children, function (ch) {
+        var t = ch.localName; if (!SVG_TAGS[t] || depth > 4) return;
+        var a = '';
+        Array.prototype.forEach.call(ch.attributes, function (at) {
+          if (SVG_ATTR.test(at.name) && /^[A-Za-z0-9 .,\-+#%()]*$/.test(at.value) && !/url\(/i.test(at.value)) a += ' ' + at.name + '="' + at.value + '"';
+        });
+        out += t === 'g' ? '<g' + a + '>' + walk(ch, depth + 1) + '</g>' : '<' + t + a + '/>';
+      });
+      return out;
+    }
+    return walk(doc.documentElement, 0);
+  }
+
+  function cleanBundle(raw) {
+    var bad = function () { return mkerr('Odkaz nebo soubor nemá správný formát.', 0); };
+    if (!raw || typeof raw !== 'object' || raw.v !== 1 || !raw.course || typeof raw.course !== 'object') throw bad();
+    var r = deep(raw, 0), c = r.course;
+    if (typeof c.id !== 'string' || !ID_RE.test(c.id)) throw bad();
+    delete c.myPoints; delete c.myNote;                       // body a docházka se nikdy nepřijímají
+    c.hue = num(c.hue, 0, 360); c.credits = num(c.credits, 0, 999);
+    c.icon = typeof c.icon === 'string' && ID_RE.test(c.icon) ? c.icon : '';
+    if (c.leafletLabel != null) c.leafletLabel = str(c.leafletLabel, 40).replace(/[<>&"'`]/g, '');
+    if (c.badge != null) c.badge = (c.badge && typeof c.badge === 'object') ? { t: str(c.badge.t, 80), lvl: /^[a-z]{1,10}$/.test(c.badge.lvl) ? c.badge.lvl : '' } : null;
+    ['where', 'people', 'links'].forEach(function (k) { c[k] = objs(c[k]); });
+    c.watch = arr(c.watch);
+    c.conditions = objs(c.conditions).map(function (g) {
+      if (g.items != null) g.items = arr(g.items);
+      if (g.table != null) {
+        if (g.table && Array.isArray(g.table.head) && Array.isArray(g.table.rows)) g.table.rows = g.table.rows.map(arr); else delete g.table;
+      }
+      return g;
+    });
+    c.materials = objs(c.materials).map(function (g) { g.items = objs(g.items); return g; });
+    function when(x) { if (!(typeof x.tm === 'string' && TM_RE.test(x.tm))) delete x.tm; delete x.cid; delete x.key; return x; }   // cid/key si hlavní skript skládá sám
+    c.deadlines = objs(c.deadlines).filter(function (x) { return typeof x.d === 'string' && DATE_RE.test(x.d); }).map(when);
+    c.plan = objs(c.plan).filter(function (x) { return typeof x.d === 'string' && DATE_RE.test(x.d); }).map(when);
+
+    var L = null, lids = {};
+    if (r.leaflets != null) {
+      L = objs(r.leaflets).filter(function (l) { return typeof l.id === 'string' && ID_RE.test(l.id); }).map(function (l) {
+        lids[l.id] = 1; l.links = objs(l.links);
+        l.tasks = objs(l.tasks).map(function (t) {
+          if (!VERS[t.v]) delete t.v;
+          if (t.parts != null) t.parts = objs(t.parts);
+          return t;
+        });
+        return l;
+      });
+    }
+    var charts = {};
+    if (r.charts && typeof r.charts === 'object') Object.keys(r.charts).forEach(function (k) {
+      var i = k.indexOf(':'); if (i > 0 && lids[k.slice(0, i)] && Array.isArray(r.charts[k])) charts[k] = objs(r.charts[k]);
+    });
+    var tt = objs(r.timetable).filter(function (b) {
+      return b.day >= 1 && b.day <= 5 && b.day % 1 === 0 && TM_RE.test(b.from) && TM_RE.test(b.to);
+    }).map(function (b) {
+      return { cid: c.id, day: b.day, from: b.from, to: b.to, kind: str(b.kind, 40), room: str(b.room, 40), note: b.note ? str(b.note, 120) : undefined };
+    });
+    var icon = null;
+    if (r.icon && typeof r.icon === 'object' && r.icon.id === c.icon && c.icon) { var sv = cleanSvg(r.icon.svg); if (sv) icon = { id: c.icon, svg: sv }; }
+    return {
+      v: 1, ts: num(r.ts, 0, 8.64e15),
+      isBase: typeof r.isBase === 'string' && /^https:\/\/[a-z0-9.-]*muni\.cz(\/[A-Za-z0-9._~\/-]*)?$/.test(r.isBase) ? r.isBase : '',
+      semester: str(r.semester, 60), updated: str(r.updated, 40),
+      course: c, leaflets: L, charts: charts, timetable: tt, icon: icon
+    };
+  }
+
+  /* přidá (nebo aktualizuje) sdílený předmět v tomto zařízení */
+  function ingest(raw) {
+    var b; try { b = cleanBundle(raw); } catch (e) { return Promise.reject(e); }   // chyba formátu = zamítnutý příslib, ne výjimka
+    var id = b.course.id;
+    if (OWN[id]) return Promise.resolve({ st: 'own', b: b });
+    var ex = SH.filter(function (x) { return x.id === id; })[0];
+    if (ex && ex.ts === b.ts) return Promise.resolve({ st: 'same', b: b });
+    if (ex && ex.ts > b.ts) return Promise.resolve({ st: 'older', b: b });
+    var prev = SH;
+    SH = SH.filter(function (x) { return x.id !== id; });
+    SH.push({ id: id, ts: b.ts, added: Date.now(), b: b });
+    return saveShared().then(function (ok) {
+      if (!ok) { SH = prev; throw mkerr('Předmět se nepodařilo uložit do zařízení (soukromý režim prohlížeče?).', 0); }
+      return { st: ex ? 'updated' : 'added', b: b };
+    });
+  }
+  function say(res) {
+    var n = res.b.course.short || res.b.course.name || 'předmět';
+    var m = { added: 'Přidán předmět ' + n + '.', updated: 'Předmět ' + n + ' aktualizován.', own: 'Předmět ' + n + ' už v appce máš.', older: 'Máš novější verzi předmětu ' + n + '.' }[res.st];
+    if (m) toast(m, null, null, 6000);
+  }
+  function openHash(id) { try { history.replaceState(null, '', location.pathname + location.search + '#' + id); } catch (e) {} }
+  function clearHash() { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+
+  function readHashShare() {
+    var m = /^#add=(.+)$/.exec(location.hash || '');
+    if (!m) return Promise.resolve(null);
+    return decode(m[1]).then(function (raw) { return { raw: raw }; }, function (e) { return { err: (e && e.message) || 'Odkaz je poškozený.' }; });
+  }
+  function importSharedFile(file) {
+    if (file.size > MAXRAW) { toast('Soubor je příliš velký.'); return; }
+    file.text().then(function (txt) {
+      var o; try { o = JSON.parse(txt); } catch (e) { throw mkerr('Soubor není platný JSON.', 0); }
+      return ingest(o);
+    }).then(function (res) {
+      say(res); openHash(res.b.course.id); setTimeout(function () { location.reload(); }, 700);
+    }).catch(function (e) { toast((e && e.message) || 'Soubor se nepodařilo přidat.'); });
+  }
+  /* odkaz vložený do adresy, když už je appka otevřená */
+  window.addEventListener('hashchange', function () {
+    if (!/^#add=/.test(location.hash)) return;
+    readHashShare().then(function (inc) {
+      if (!inc || inc.err) { clearHash(); toast((inc && inc.err) || 'Odkaz je poškozený.'); return; }
+      return ingest(inc.raw).then(function (res) {
+        say(res);
+        if (res.st === 'added' || res.st === 'updated') { openHash(res.b.course.id); setTimeout(function () { location.reload(); }, 700); }
+        else location.hash = '#' + res.b.course.id;
+      });
+    }).catch(function (e) { clearHash(); toast((e && e.message) || 'Odkaz se nepodařilo otevřít.'); });
+  });
+
+  /* ---- sdílení z mé appky ---- */
+  function saveFile(id) {
+    var b = exportBundle(id); if (!b) return;
+    var name = 'skola-' + id.replace(/[^A-Za-z0-9_.-]/g, '') + '.json', blob = new Blob([JSON.stringify(b)], { type: 'application/json' }), f = null;
+    try { f = new File([blob], name, { type: 'application/json' }); } catch (e) {}
+    if (f && navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: 'Škola – ' + (b.course.short || b.course.name || id) }).catch(function () {}); return; }
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+  function linkSheet(link, id) {
+    if (document.querySelector('.gsheetbg')) return;
+    var bg = node('div', 'gsheetbg'), sh = node('div', 'gsheet');
+    sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'Odkaz na předmět');
+    function close() { bg.remove(); }
+    function btn(label, cls, fn) { var b = node('button', 'gbtn' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', fn); sh.appendChild(b); return b; }
+    sh.appendChild(node('h2', null, 'Odkaz na předmět'));
+    sh.appendChild(node('div', 'gmeta', 'Zkopíruj odkaz a pošli ho. Kdo ho otevře, předmět se mu přidá do appky.' + (link.length > LINK_WARN ? ' Odkaz je dlouhý; kde ho useknou, pošli předmět jako soubor.' : '')));
+    var ta = document.createElement('textarea'); ta.className = 'gta'; ta.readOnly = true; ta.rows = 4; ta.value = link; ta.setAttribute('aria-label', 'Odkaz');
+    ta.addEventListener('focus', function () { ta.select(); });
+    sh.appendChild(ta);
+    btn('Kopírovat', '', function () {
+      ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      if (!ok && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(function () { toast('Odkaz zkopírován.', null, null, 3000); }, function () {});
+      else if (ok) toast('Odkaz zkopírován.', null, null, 3000);
+    });
+    btn('Poslat jako soubor', 'sec', function () { saveFile(id); });
+    btn('Zavřít', 'sec', close);
+    bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
+    bg.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    bg.appendChild(sh); document.body.appendChild(bg); ta.focus();
+  }
+  /* jedno klepnutí = odkaz ve schránce. Odkaz se skládá asynchronně, proto se do schránky píše „příslibem“ (jinak Safari
+     po čekání odmítne); když to nejde, otevře se okno s odkazem k ručnímu zkopírování. */
+  function copyLink(id) {
+    var b = exportBundle(id); if (!b) { toast('Předmět se nepodařilo najít.'); return; }
+    var p = encode(b).then(function (z) { return redirectUri() + '#add=' + z; });
+    function done(link) {
+      if (link.length > LINK_WARN) toast('Odkaz zkopírován, ale je dlouhý (' + Math.round(link.length / 1000) + ' tis. znaků). Telegram a podobné ho useknou.', 'Poslat soubor', function () { saveFile(id); }, 12000);
+      else toast('Odkaz na předmět zkopírován.', null, null, 3000);
+    }
+    function fallback() {
+      return p.then(function (link) {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(link).then(function () { done(link); }, function () { linkSheet(link, id); });
+        linkSheet(link, id);
+      });
+    }
+    var cp = null;
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        cp = navigator.clipboard.write([new ClipboardItem({ 'text/plain': p.then(function (l) { return new Blob([l], { type: 'text/plain' }); }) })])
+          .then(function () { return p; }).then(done);
+      }
+    } catch (e) { cp = null; }
+    (cp ? cp.catch(fallback) : fallback()).catch(function (e) { toast((e && e.message) || 'Odkaz se nepodařilo vytvořit.'); });
+  }
+  function removeShared(id) {
+    SH = SH.filter(function (x) { return x.id !== id; });
+    saveShared().then(function () { clearHash(); location.reload(); });
+  }
+  window.SkolaShare = { copy: copyLink, file: saveFile, remove: removeShared };
+
+  /* vlastní data + sdílené předměty = to, s čím pracuje hlavní skript */
+  function merged(base) {
+    var d = {}; Object.keys(base).forEach(function (k) { d[k] = base[k]; });
+    d.courses = (base.courses || []).slice();
+    d.leaflets = Object.assign({}, base.leaflets); d.charts = Object.assign({}, base.charts); d.icons = Object.assign({}, base.icons);
+    d.timetable = (base.timetable || []).slice(); d.shared = {};
+    var have = {}; d.courses.forEach(function (c) { have[c.id] = 1; });
+    SH.forEach(function (it) {
+      var b = it.b, c = b.course; if (have[c.id]) return; have[c.id] = 1;
+      d.courses.push(c); d.shared[c.id] = it.ts;
+      if (b.leaflets) d.leaflets[c.id] = b.leaflets;
+      Object.keys(b.charts || {}).forEach(function (k) { if (!(k in d.charts)) d.charts[k] = b.charts[k]; });
+      (b.timetable || []).forEach(function (t) { d.timetable.push(t); });
+      if (b.icon && !d.icons[b.icon.id]) d.icons[b.icon.id] = b.icon.svg;
+    });
+    return d;
+  }
+  /* bez přihlášení: základ z nejnovějšího sdíleného předmětu */
+  function guestBase() {
+    var top = SH.slice().sort(function (a, b) { return b.ts - a.ts; })[0] || { b: {} };
+    return { guest: true, isBase: top.b.isBase || 'https://is.muni.cz', semester: top.b.semester || '', updated: top.b.updated || '',
+      student: { program: 'sdílené předměty' }, courses: [], leaflets: {}, charts: {}, timetable: [], notices: [], icons: {} };
+  }
 
   /* ---------- účet (v hlavní appce) ---------- */
   function addAccountButton() {
@@ -702,17 +1015,20 @@ details.alt .graph{margin:4px 0 0}
       var owner = (cache && cache.owner) || lget('owner') || 'neznámý účet';
       var when = cache && cache.saved ? new Date(cache.saved).toLocaleString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'neuloženo';
       sh.appendChild(node('h2', null, 'Účet a data'));
-      sh.appendChild(node('div', 'gmeta', 'Přihlášen jako ' + owner + '. Data v tomto zařízení z ' + when + '.'));
+      sh.appendChild(node('div', 'gmeta', cache
+        ? 'Přihlášen jako ' + owner + '. Data v tomto zařízení z ' + when + '.' + (SH.length ? ' Sdílených předmětů: ' + SH.length + '.' : '')
+        : 'Bez přihlášení: v zařízení jsou jen sdílené předměty (' + SH.length + ').'));
       function close() { bg.remove(); }
       function btn(label, cls, fn) { var b = node('button', 'gbtn' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', fn); sh.appendChild(b); return b; }
       if (token() && cache) {
         btn('Zkontrolovat aktualizaci dat', 'sec', function () { close(); toast('Kontroluji Disk…'); checkUpdate(cache, false); });
         sh.appendChild(fileBtn('Nahrát nová data ze souboru…', 'gbtn sec', function (f) { close(); importFile(f, cache.fid || null, owner, false); }));
       } else {
-        btn('Přihlásit znovu (obnoví spojení s Diskem)', 'sec', login);
+        btn(cache ? 'Přihlásit znovu (obnoví spojení s Diskem)' : 'Přihlásit se přes Google (moje vlastní data)', 'sec', login);
       }
+      sh.appendChild(fileBtn('Přidat sdílený předmět ze souboru…', 'gbtn sec', function (f) { close(); importSharedFile(f); }));
       var armed = false;
-      var out = btn('Odhlásit a smazat data z tohoto zařízení', 'dng', function () {
+      var out = btn(cache ? 'Odhlásit a smazat data z tohoto zařízení' : 'Smazat data z tohoto zařízení', 'dng', function () {
         if (!armed) { armed = true; out.textContent = 'Opravdu smazat? Klepni znovu'; return; }
         /* nejdřív vypnout notifikace na tomto zařízení, ať nechodí upozornění na smazaná data */
         var off = window.SkolaPush ? Promise.race([window.SkolaPush.off(), new Promise(function (r) { setTimeout(r, 2500); })]) : Promise.resolve();
@@ -729,7 +1045,8 @@ details.alt .graph{margin:4px 0 0}
   /* ---------- spuštění hlavního skriptu ---------- */
   function boot(data) {
     if (booted) return; booted = true;
-    window.DATA = data;
+    if (data) { OWN = {}; (data.courses || []).forEach(function (c) { OWN[c.id] = 1; }); }
+    window.DATA = merged(data || guestBase());
     var g = document.getElementById('gate'); if (g) g.remove();
     root.classList.add('unlocked');
     var src = document.getElementById('skola-main');
@@ -740,17 +1057,30 @@ details.alt .graph{margin:4px 0 0}
 
   function start() {
     var r = handleRedirect();
-    idbGet('data').then(function (cache) {
-      var owner = lget('owner');
-      if (cache && cache.data && (!owner || cache.owner === owner)) {
-        boot(cache.data);
-        if (r && r.ok) checkUpdate(cache, true);
-        else if (r && r.err) toast(r.err);
-        return;
-      }
-      if (r && r.err) return showLogin(r.err);
-      if (!token()) return showLogin();
-      loadFromDrive();
+    Promise.all([idbGet('data'), loadShared(), readHashShare()]).then(function (a) {
+      var cache = a[0], inc = a[2], owner = lget('owner');
+      var hasOwn = !!(cache && cache.data && (!owner || cache.owner === owner));
+      OWN = {}; if (hasOwn) (cache.data.courses || []).forEach(function (c) { OWN[c.id] = 1; });
+      /* odkaz na předmět v adrese: nejdřív ho uložit, pak spustit appku rovnou na něm */
+      var pre = inc && inc.raw
+        ? ingest(inc.raw).then(function (res) { return { res: res }; }, function (e) { return { err: (e && e.message) || 'Odkaz se nepodařilo otevřít.' }; })
+        : Promise.resolve(inc && inc.err ? { err: inc.err } : null);
+      return pre.then(function (x) {
+        var msg = null;
+        if (x && x.res) { say(x.res); openHash(x.res.b.course.id); }
+        else if (x && x.err) { msg = x.err; clearHash(); }
+        if (hasOwn) {
+          boot(cache.data);
+          if (r && r.ok) checkUpdate(cache, true);
+          else if (r && r.err) toast(r.err);
+          else if (msg) toast(msg);
+          return;
+        }
+        if (r && r.err) { if (SH.length) { boot(null); toast(r.err); } else showLogin(r.err); return; }
+        if (token()) return loadFromDrive();
+        if (SH.length) { boot(null); if (msg) toast(msg); return; }
+        showLogin(msg || undefined);
+      });
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
@@ -1219,7 +1549,7 @@ function tile(c){
   return '<button class="tile" data-course="'+c.id+'" style="--h:'+c.hue+'">'+
     '<div class="th"><span class="sq">'+icon(c.icon)+'</span>'+top+'</div>'+
     '<div><div class="nm">'+esc(c.name)+'</div><div class="cd"><span class="mono">'+esc(c.code)+'</span> · '+c.credits+' kr · '+esc(c.ending)+'</div></div>'+
-    '<div class="chips">'+(lf.length?'<span class="chip c">leaflety '+solved+'/'+lf.length+'</span>':'')+(c.badge?'<span class="chip '+(c.badge.lvl||'')+'">'+esc(c.badge.t)+'</span>':'')+'</div>'+nx+'</button>';
+    '<div class="chips">'+((D.shared||{})[c.id]?'<span class="chip">sdílený</span>':'')+(lf.length?'<span class="chip c">leaflety '+solved+'/'+lf.length+'</span>':'')+(c.badge?'<span class="chip '+(c.badge.lvl||'')+'">'+esc(c.badge.t)+'</span>':'')+'</div>'+nx+'</button>';
 }
 
 function viewHome(){
@@ -1257,7 +1587,8 @@ function tabsFor(c){
 function viewCourse(){
   var c=course(st.course); if(!c) return viewHome();
   var h='<button class="back" data-go="home">'+BACK+'Předměty</button>';
-  h+='<div style="--h:'+c.hue+'"><div class="chead"><span class="sq">'+icon(c.icon)+'</span><div class="ti"><h1>'+esc(c.name)+'</h1><div class="sub"><span class="chip c mono">'+esc(c.code)+'</span><span class="chip">'+c.credits+' kr</span><span class="chip">'+esc(c.ending)+'</span><span class="chip">'+esc(c.load)+'</span>'+(c.lang?'<span class="chip">'+esc(c.lang)+'</span>':'')+'</div></div></div>';
+  h+='<div style="--h:'+c.hue+'"><div class="chead"><span class="sq">'+icon(c.icon)+'</span><div class="ti"><h1>'+esc(c.name)+'</h1><div class="sub"><span class="chip c mono">'+esc(c.code)+'</span><span class="chip">'+c.credits+' kr</span><span class="chip">'+esc(c.ending)+'</span><span class="chip">'+esc(c.load)+'</span>'+(c.lang?'<span class="chip">'+esc(c.lang)+'</span>':'')+'</div>'+
+    '<div class="sub"><button class="fb" data-share="'+esc(c.id)+'">Kopírovat odkaz</button>'+((D.shared||{})[c.id]?'<button class="fb" data-unshare="'+esc(c.id)+'">Odebrat z appky</button><span class="chip">sdílený předmět</span>':'')+'</div></div></div>';
   h+='<div class="tabs" role="tablist">'+tabsFor(c).map(function(t){return '<button role="tab" data-tab="'+t[0]+'" aria-selected="'+(st.tab===t[0])+'">'+t[1]+(t[2]?'<span class="n">'+t[2]+'</span>':'')+'</button>'}).join('')+'</div>';
   h+='<div class="panel">'+panel(c)+'</div></div>';
   return h;
@@ -1428,18 +1759,42 @@ function viewWeek(){
   for(var k=H0;k<H1;k++) hr+='<span style="top:'+((k-H0)*PX)+'px">'+k+':00</span>';
   hr+='</div>';
   h+=hr;
+  var anyC=false;
   for(var di=1;di<=5;di++){
     h+='<div class="dc" style="height:'+((H1-H0)*PX)+'px">';
-    D.timetable.filter(function(b){return b.day===di}).forEach(function(b){
-      var c=course(b.cid), f=b.from.split(':'), t=b.to.split(':');
+    var bs=D.timetable.filter(function(b){return b.day===di}), lay=layoutDay(bs);
+    bs.forEach(function(b,bi){
+      var c=course(b.cid); if(!c) return;
+      var f=b.from.split(':'), t=b.to.split(':'), ly=lay[bi];
       var top=((+f[0])+(+f[1])/60-H0)*PX, ht=((+t[0])+(+t[1])/60-(+f[0])-(+f[1])/60)*PX-2;
-      h+='<button class="blk'+(b.conflict?' conflict':'')+'" data-course="'+c.id+'" style="--h:'+c.hue+';top:'+top+'px;height:'+ht+'px'+(b.col?';left:'+b.col[0]+'%;right:'+b.col[1]+'%':'')+'"><b>'+esc(c.short)+'</b>'+esc(b.kind)+' · '+esc(b.room)+'<br>'+b.from+'–'+b.to+(b.note?'<br>'+esc(b.note):'')+'</button>';
+      var col=b.col||(ly?[ly.l,ly.r]:null), cf=!!(b.conflict||ly);
+      if(cf) anyC=true;
+      h+='<button class="blk'+(cf?' conflict':'')+'" data-course="'+c.id+'" style="--h:'+c.hue+';top:'+top+'px;height:'+ht+'px'+(col?';left:'+col[0]+'%;right:'+col[1]+'%':'')+'"><b>'+esc(c.short)+'</b>'+esc(b.kind)+' · '+esc(b.room)+'<br>'+esc(b.from)+'–'+esc(b.to)+(b.note?'<br>'+esc(b.note):'')+'</button>';
     });
     h+='</div>';
   }
   h+='</div></div>';
-  h+='<p class="muted" style="font-size:13px;margin:12px 2px 0">Čárkovaně orámované bloky se v čase překrývají (pondělí 14:00).</p>';
+  if(anyC) h+='<p class="muted" style="font-size:13px;margin:12px 2px 0">Čárkovaně orámované bloky se v čase překrývají.</p>';
   return h;
+}
+/* překrývající se bloky bez ručně daných sloupců (třeba z přidaných sdílených předmětů) rozdělit vedle sebe */
+function tmin(s){var p=String(s).split(':');return (+p[0])*60+(+p[1]||0)}
+function layoutDay(bs){
+  var out=bs.map(function(){return null}), idx=[], groups=[], cur=null;
+  bs.forEach(function(b,i){ if(!b.col) idx.push(i) });
+  idx.sort(function(a,b){return tmin(bs[a].from)-tmin(bs[b].from)});
+  idx.forEach(function(i){
+    var s=tmin(bs[i].from), e=tmin(bs[i].to);
+    if(cur&&s<cur.end){ cur.m.push(i); cur.end=Math.max(cur.end,e); } else { cur={m:[i],end:e}; groups.push(cur); }
+  });
+  groups.forEach(function(g){
+    if(g.m.length<2) return;
+    var lanes=[], lane={};
+    g.m.forEach(function(i){ var s=tmin(bs[i].from), k=0; while(lanes[k]>s) k++; lanes[k]=tmin(bs[i].to); lane[i]=k; });
+    var n=lanes.length;
+    g.m.forEach(function(i){ out[i]={l:lane[i]*100/n, r:(n-1-lane[i])*100/n}; });
+  });
+  return out;
 }
 
 /* ---------- render + events ---------- */
@@ -1460,8 +1815,14 @@ function go(v,opts){
   try{ history.replaceState(null,'',v==='course'?'#'+st.course:'#'+v) }catch(e){}
 }
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-go],[data-course],[data-tab],[data-leaflet],[data-sol],[data-allsol],[data-basic],[data-fc],[data-kind],[data-toggle]');
+  var t=e.target.closest('[data-go],[data-course],[data-tab],[data-leaflet],[data-sol],[data-allsol],[data-basic],[data-fc],[data-kind],[data-toggle],[data-share],[data-unshare]');
   if(!t) return;
+  if(t.hasAttribute('data-share')){ if(window.SkolaShare) window.SkolaShare.copy(t.dataset.share); return; }
+  if(t.hasAttribute('data-unshare')){
+    if(t.dataset.armed){ if(window.SkolaShare) window.SkolaShare.remove(t.dataset.unshare); }
+    else { t.dataset.armed='1'; t.textContent='Opravdu odebrat? Klepni znovu'; }
+    return;
+  }
   if(t.hasAttribute('data-go')){ if(t.dataset.go==='home') st.course=null; go(t.dataset.go,{leaflet:null}); return; }
   if(t.hasAttribute('data-course')){ var tab=t.dataset.tab||'prehled'; go('course',{course:t.dataset.course,tab:tab,leaflet:null}); return; }
   if(t.hasAttribute('data-tab')){ st.tab=t.dataset.tab; st.leaflet=null; render(); return; }
