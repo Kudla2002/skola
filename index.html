@@ -232,6 +232,8 @@ tr.past td{color:var(--label2)}
 .task-t p{margin:0 0 6px}
 .task-t ul{margin:6px 0 4px;padding-left:0;list-style:none;display:grid;gap:5px}
 .task-t ul li{padding-left:28px;position:relative}
+.task-t .rtx ul{list-style:disc;padding-left:20px;display:block;margin:6px 0}
+.task-t .rtx ul li{padding-left:0}
 .task-t ul li>b.pl{position:absolute;left:0;top:0;font-weight:600;color:var(--c-fg);font-size:.95em}
 .mk{display:inline-block;font-size:11px;font-weight:600;border-radius:99px;padding:0 8px;margin-right:6px;vertical-align:middle;line-height:1.6}
 .mk.b{background:var(--label);color:var(--bg2)}
@@ -1390,7 +1392,7 @@ function taskEl(l,t){
       '<div class="ver">'+(t.v?'<span class="chip '+VER[t.v][0]+'">'+VER[t.v][1]+'</span>':'')+(t.key?'<span class="chip">klíč: '+esc(t.key)+'</span>':'')+'</div>'+
       '<label class="rev"><input class="chk" type="checkbox" data-seen="'+esc(id)+'"'+(seen[id]?' checked':'')+'> Rozumím postupu</label></div>';
   }
-  return '<div class="task"><div class="task-h"><span class="task-n">'+esc(t.n)+'</span><div class="task-t">'+(t.m?mk(t.m):'')+(t.t?inl(t.t):'')+(parts?'<ul>'+parts+'</ul>':'')+'</div></div>'+
+  return '<div class="task"><div class="task-h"><span class="task-n">'+esc(t.n)+'</span><div class="task-t">'+(t.m?mk(t.m):'')+(t.t?(/\n/.test(t.t)?'<div class="rtx">'+rt(t.t)+'</div>':inl(t.t)):'')+(parts?'<ul>'+parts+'</ul>':'')+'</div></div>'+
     '<button class="sol-btn" data-sol="'+esc(id)+'" aria-expanded="'+open+'">'+(open?'Skrýt řešení':'Ukázat řešení')+'</button>'+sol+'</div>';
 }
 
