@@ -614,7 +614,6 @@ details.alt .graph{margin:4px 0 0}
       title: 'Škola',
       text: 'Předměty, termíny a vyřešené leaflety. Data jsou uložená na tvém Google Disku, tahle stránka je neobsahuje. Máš od spolužáka odkaz na předmět? Otevři ho přímo, přihlášení nepotřebuješ.',
       msg: msg || (ok ? '' : 'Přihlášení ještě není nastavené (chybí Google Client ID).'),
-      file: { label: 'Přidat předmět ze souboru', cls: 'sec', fn: function (f) { importSharedFile(f); } },
       buttons: ok ? [{ label: 'Přihlásit se přes Google', fn: login }] : []
     });
   }
@@ -626,10 +625,10 @@ details.alt .graph{margin:4px 0 0}
   function showImport(email, existingId, msg) {
     screen({
       title: 'Nahraj data',
-      text: 'Na tvém Google Disku zatím nejsou data aplikace. Vyber soubor skola-data.json. Nahraje se na tvůj Disk a další zařízení si ho po přihlášení stáhnou samo.',
+      text: 'Na tvém Google Disku zatím nejsou data aplikace. Pokud jsi jejich majitel, vyber soubor skola-data.json. Pokud jen otevíráš odkazy od spolužáků, data nepotřebuješ.',
       msg: msg,
       file: { label: 'Vybrat skola-data.json', fn: function (f) { importFile(f, existingId, email, true); } },
-      buttons: (SH.length ? [{ label: 'Pokračovat jen se sdílenými předměty', cls: 'sec', fn: function () { boot(null); } }] : []).concat([{ label: 'Odhlásit', cls: 'sec', fn: logout }]),
+      buttons: [{ label: SH.length ? 'Pokračovat jen se sdílenými předměty' : 'Nemám data, jen otevírám odkazy', cls: 'sec', fn: function () { boot(null); } }, { label: 'Odhlásit', cls: 'sec', fn: logout }],
       meta: 'Přihlášen jako ' + email
     });
   }
@@ -698,7 +697,7 @@ details.alt .graph{margin:4px 0 0}
   var OWN = {};                 // id vlastních předmětů z Disku (ty sdílený předmět nepřepíše)
   var ID_RE = /^[A-Za-z0-9_.-]{1,40}$/, DATE_RE = /^\d{4}-\d{2}-\d{2}$/, TM_RE = /^\d{1,2}:\d{2}$/;
   var VERS = { key: 1, calc: 1, theory: 1, unver: 1, keyx: 1 };
-  var MAXRAW = 8 * 1024 * 1024, LINK_WARN = 12000;
+  var MAXRAW = 8 * 1024 * 1024, LINK_WARN = 4000;   // Telegram useká zprávy nad 4096 znaků, Discord nad 2000
 
   function loadShared() {
     return idbGet('shared').then(function (v) {
@@ -808,7 +807,7 @@ details.alt .graph{margin:4px 0 0}
   }
 
   function cleanBundle(raw) {
-    var bad = function () { return mkerr('Odkaz nebo soubor nemá správný formát.', 0); };
+    var bad = function () { return mkerr('Odkaz nemá správný formát.', 0); };
     if (!raw || typeof raw !== 'object' || raw.v !== 1 || !raw.course || typeof raw.course !== 'object') throw bad();
     var r = deep(raw, 0), c = r.course;
     if (typeof c.id !== 'string' || !ID_RE.test(c.id)) throw bad();
@@ -891,15 +890,6 @@ details.alt .graph{margin:4px 0 0}
     if (!m) return Promise.resolve(null);
     return decode(m[1]).then(function (raw) { return { raw: raw }; }, function (e) { return { err: (e && e.message) || 'Odkaz je poškozený.' }; });
   }
-  function importSharedFile(file) {
-    if (file.size > MAXRAW) { toast('Soubor je příliš velký.'); return; }
-    file.text().then(function (txt) {
-      var o; try { o = JSON.parse(txt); } catch (e) { throw mkerr('Soubor není platný JSON.', 0); }
-      return ingest(o);
-    }).then(function (res) {
-      say(res); openHash(res.b.course.id); setTimeout(function () { location.reload(); }, 700);
-    }).catch(function (e) { toast((e && e.message) || 'Soubor se nepodařilo přidat.'); });
-  }
   /* odkaz vložený do adresy, když už je appka otevřená */
   window.addEventListener('hashchange', function () {
     if (!/^#add=/.test(location.hash)) return;
@@ -914,14 +904,6 @@ details.alt .graph{margin:4px 0 0}
   });
 
   /* ---- sdílení z mé appky ---- */
-  function saveFile(id) {
-    var b = exportBundle(id); if (!b) return;
-    var name = 'skola-' + id.replace(/[^A-Za-z0-9_.-]/g, '') + '.json', blob = new Blob([JSON.stringify(b)], { type: 'application/json' }), f = null;
-    try { f = new File([blob], name, { type: 'application/json' }); } catch (e) {}
-    if (f && navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: 'Škola – ' + (b.course.short || b.course.name || id) }).catch(function () {}); return; }
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  }
   function linkSheet(link, id) {
     if (document.querySelector('.gsheetbg')) return;
     var bg = node('div', 'gsheetbg'), sh = node('div', 'gsheet');
@@ -929,7 +911,7 @@ details.alt .graph{margin:4px 0 0}
     function close() { bg.remove(); }
     function btn(label, cls, fn) { var b = node('button', 'gbtn' + (cls ? ' ' + cls : ''), label); b.type = 'button'; b.addEventListener('click', fn); sh.appendChild(b); return b; }
     sh.appendChild(node('h2', null, 'Odkaz na předmět'));
-    sh.appendChild(node('div', 'gmeta', 'Zkopíruj odkaz a pošli ho. Kdo ho otevře, předmět se mu přidá do appky.' + (link.length > LINK_WARN ? ' Odkaz je dlouhý; kde ho useknou, pošli předmět jako soubor.' : '')));
+    sh.appendChild(node('div', 'gmeta', 'Zkopíruj odkaz a pošli ho. Kdo ho otevře, předmět se mu přidá do appky.' + (link.length > LINK_WARN ? ' Odkaz je dlouhý: Telegram a Discord ho useknou, jinde projde.' : '')));
     var ta = document.createElement('textarea'); ta.className = 'gta'; ta.readOnly = true; ta.rows = 4; ta.value = link; ta.setAttribute('aria-label', 'Odkaz');
     ta.addEventListener('focus', function () { ta.select(); });
     sh.appendChild(ta);
@@ -938,7 +920,6 @@ details.alt .graph{margin:4px 0 0}
       if (!ok && navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(function () { toast('Odkaz zkopírován.', null, null, 3000); }, function () {});
       else if (ok) toast('Odkaz zkopírován.', null, null, 3000);
     });
-    btn('Poslat jako soubor', 'sec', function () { saveFile(id); });
     btn('Zavřít', 'sec', close);
     bg.addEventListener('click', function (e) { if (e.target === bg) close(); });
     bg.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
@@ -950,7 +931,7 @@ details.alt .graph{margin:4px 0 0}
     var b = exportBundle(id); if (!b) { toast('Předmět se nepodařilo najít.'); return; }
     var p = encode(b).then(function (z) { return redirectUri() + '#add=' + z; });
     function done(link) {
-      if (link.length > LINK_WARN) toast('Odkaz zkopírován, ale je dlouhý (' + Math.round(link.length / 1000) + ' tis. znaků). Telegram a podobné ho useknou.', 'Poslat soubor', function () { saveFile(id); }, 12000);
+      if (link.length > LINK_WARN) toast('Odkaz zkopírován (' + Math.round(link.length / 1000) + ' tis. znaků). Telegram a Discord ho useknou, jinde projde.', null, null, 8000);
       else toast('Odkaz na předmět zkopírován.', null, null, 3000);
     }
     function fallback() {
@@ -972,7 +953,7 @@ details.alt .graph{margin:4px 0 0}
     SH = SH.filter(function (x) { return x.id !== id; });
     saveShared().then(function () { clearHash(); location.reload(); });
   }
-  window.SkolaShare = { copy: copyLink, file: saveFile, remove: removeShared };
+  window.SkolaShare = { copy: copyLink, remove: removeShared };
 
   /* vlastní data + sdílené předměty = to, s čím pracuje hlavní skript */
   function merged(base) {
@@ -1026,7 +1007,6 @@ details.alt .graph{margin:4px 0 0}
       } else {
         btn(cache ? 'Přihlásit znovu (obnoví spojení s Diskem)' : 'Přihlásit se přes Google (moje vlastní data)', 'sec', login);
       }
-      sh.appendChild(fileBtn('Přidat sdílený předmět ze souboru…', 'gbtn sec', function (f) { close(); importSharedFile(f); }));
       var armed = false;
       var out = btn(cache ? 'Odhlásit a smazat data z tohoto zařízení' : 'Smazat data z tohoto zařízení', 'dng', function () {
         if (!armed) { armed = true; out.textContent = 'Opravdu smazat? Klepni znovu'; return; }
@@ -1565,6 +1545,7 @@ function viewHome(){
     '<button class="kpi" data-go="deadlines"><span class="kl">Do 7 dní</span><span class="kv2">'+week+'</span><span class="ks">'+(week===1?'otevřený termín':(week>=2&&week<=4?'otevřené termíny':'otevřených termínů'))+'</span></button>'+
     '<div class="kpi"><span class="kl">Rozumím postupu</span><span class="kv2">'+Math.round(pg.p*100)+' %</span><span class="ks">'+pg.seen+' z '+pg.tot+' úloh</span>'+ring(pg.p,38)+'</div>'+
     '<div class="kpi"><span class="kl">Hotová řešení</span><span class="kv2">'+pg.lh+' / '+pg.ln+'</span><span class="ks">leafletů a seminářů</span></div></div>';
+  if(!D.courses.length) return h+'<div class="empty" style="margin-top:18px">Zatím tu nic není. Otevři odkaz na předmět od spolužáka a přidá se sem.</div>';
   h+='<h2 class="sh">Předměty<small>'+D.courses.length+' předmětů · '+D.courses.reduce(function(a,c){return a+c.credits},0)+' kreditů</small></h2><div class="tiles">'+D.courses.map(tile).join('')+'</div>';
   h+='<h2 class="sh">Nejbližší termíny<small>celý seznam v záložce Termíny</small></h2><div class="group">'+up.map(function(x){
     var c=course(x.cid), d=dt(x.d,'12:00'), n=daysTo(x.d,x.tm);
